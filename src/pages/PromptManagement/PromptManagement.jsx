@@ -1,8 +1,8 @@
 import { useState } from "react";
-import NewPromptModal from "./components/NewPromptModal";
+import { useOutletContext } from "react-router-dom";
 
 const PromptManagement = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isModalOpen, setIsModalOpen } = useOutletContext();
   return (
     <div
       className="flex-col flex-1 min-h-0 overflow-y-auto"
@@ -94,7 +94,6 @@ const PromptManagement = () => {
           </div>
         </div>
       </div>
-      <NewPromptModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
     
   );
