@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+}
+
+.sidebar-active {
+  background-color: #3b82f6;
+  color: white;
+}
