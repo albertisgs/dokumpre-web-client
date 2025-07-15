@@ -44,7 +44,7 @@ const Header = () => {
         <header className="flex flex-row bg-[#F9FAFB] justify-between items-center ">
             <h1 className="text-3xl font-bold mx-10">{title}</h1>
             
-            <div className="flex items-center gap-4 relative" ref={menuRef}>
+            <div className="flex items-center gap-4 relative cursor-not-allowed" ref={menuRef}>
               <img src="/active.svg" className="w-7 h-7" />
 
               <div className="relative">

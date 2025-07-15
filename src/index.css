@@ -22,3 +22,7 @@ body {
   justify-content: center;
   z-index: 50;
 }
+
+.zoomed-iframe {
+  zoom: 1.3;
+}

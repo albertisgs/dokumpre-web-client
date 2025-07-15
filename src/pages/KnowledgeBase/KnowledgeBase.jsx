@@ -22,7 +22,7 @@ const KnowledgeBase = () => {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-        <div className="relative overflow-x-auto max-h-[580px] overflow-y-auto">
+        <div className="relative overflow-x-auto max-h-[660px] overflow-y-auto">
           <table className="w-full text-sm text-left text-gray-500">
             <thead className="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
               <tr>
