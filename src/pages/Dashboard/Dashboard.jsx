@@ -15,7 +15,8 @@ const Dashboard = () => {
         </div>
       )}
       <iframe
-        src="http://10.168.81.200:3002/public/dashboard/220788b0-454c-4b80-89f0-7d79a1ff0d9c"
+        // src="http://10.168.81.200:3002/public/dashboard/220788b0-454c-4b80-89f0-7d79a1ff0d9c"
+        src="http://172.16.11.83:3002/public/dashboard/220788b0-454c-4b80-89f0-7d79a1ff0d9c"
         title="Dashboard"
         onLoad={handleLoad}
         className="w-full h-full border-0 zoomed-iframe"

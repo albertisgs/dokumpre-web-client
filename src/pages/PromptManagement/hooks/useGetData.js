@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
 const fetchSyncData = async () => {
-  const res = await axiosInstance.general.get('/api/knowledge/');
+  const res = await axiosInstance.general.get('/api/request/');
   console.log(res.data.data)
   const sortedData = res.data.data.sort((a, b) => {
-    const dateA = new Date(a.upload_date.split('/').reverse().join('-'));
-    const dateB = new Date(b.upload_date.split('/').reverse().join('-'));
+    const dateA = new Date(a.request_date);
+    const dateB = new Date(b.request_date);
     return dateB - dateA;
   });
   return sortedData;
@@ -14,7 +14,7 @@ const fetchSyncData = async () => {
 
 const useGetData = () => {
   return useQuery({
-    queryKey: ['syncData'],
+    queryKey: ['syncPromptData'],
     queryFn: fetchSyncData,
   });
 };
