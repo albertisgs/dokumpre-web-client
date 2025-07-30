@@ -1,12 +1,15 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { LogOut } from 'lucide-react';
+import { useAuth } from "../context/AuthContext";
+import { googleLogout } from "@react-oauth/google";
 
 const Header = () => {
   const location = useLocation()
   const navigate =  useNavigate()
   const [title, setTitle] = useState('')
   const [showMenu, setShowMenu] = useState(false);
+  const {logout,authState} = useAuth()
   const menuRef = useRef();
 
   useEffect(() => { 
@@ -26,7 +29,10 @@ const Header = () => {
   }, [location])
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    if (authState.authType ==='google') {
+      googleLogout();
+    }
+    logout(); 
     navigate('/login');
   };
 
@@ -47,11 +53,12 @@ const Header = () => {
             <div className="flex items-center gap-4 relative cursor-not-allowed" ref={menuRef}>
               <img src="/active.svg" className="w-7 h-7" />
 
-              <div className="relative">
+              <div className="relative z-30">
                 <img
-                  src="/avatar.svg"
+                  src={authState?.authType ==="google"?authState.user.picture:"/avatar.svg"}
                   className="w-10 h-10 cursor-pointer rounded-full"
                   onClick={() => setShowMenu(prev => !prev)}
+                  referrerPolicy="no-referrer"
                 />
 
                 {showMenu && (

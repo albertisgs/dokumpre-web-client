@@ -1,50 +1,36 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { showAlert } from '../../utils/alert';
+
+import { useLogin } from "./hooks/useLogin";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
 
-const handleSubmit = (e) => {
-  e.preventDefault();
-  const validCredentials = [
-    { email: 'superadmin@is-gs.com', password: 'superadmin' },
-    { email: 'cia@is-gs.com', password: 'cia' }
-  ];
-
-  const isValid = validCredentials.some(
-    (cred) => cred.email === email && cred.password === password
-  );
-
-  if (isValid) {
-    localStorage.setItem('token', 'fakeToken');
-    navigate('/');
-  } else {
-    showAlert({
-      title: 'Login Failed',
-      text: 'Invalid email or password.',
-      icon: 'error',
-    });
-  }
-};
-
-
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    isGoogleLoading,
+    handleSubmit,
+    handleGoogleLogin,
+  } = useLogin();
+  
   return (
     <div className="bg-gray-50 min-h-screen flex w-full font-open-sans">
       <div
         className="relative w-full md:w-1/2 flex items-center justify-start px-8 md:px-12 lg:px-20 py-16 text-white"
         style={{
           backgroundImage: 'url("/abstract-wave.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
         <div className="absolute inset-0 bg-black opacity-50 z-0" />
         <div className="relative z-10">
-          <h1 className="text-3xl lg:text-4xl font-extrabold mb-4">Welcome to</h1>
-          <h2 className="text-5xl lg:text-6xl font-extrabold text-white">Dokuprime</h2>
+          <h1 className="text-3xl lg:text-4xl font-extrabold mb-4">
+            Welcome to
+          </h1>
+          <h2 className="text-5xl lg:text-6xl font-extrabold text-white">
+            Dokuprime
+          </h2>
         </div>
       </div>
 
@@ -58,12 +44,19 @@ const handleSubmit = (e) => {
         </div>
 
         <div className="bg-white p-10 rounded-xl shadow-lg border border-gray-200 w-full max-w-lg mt-32">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">LOGIN</h2>
-          <p className="text-gray-500 mb-8 text-center">Sign in with your email credentials.</p>
+          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
+            LOGIN
+          </h2>
+          <p className="text-gray-500 mb-8 text-center">
+            Sign in with your email credentials.
+          </p>
 
           <form className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email
               </label>
               <div className="mt-1 relative">
@@ -71,17 +64,20 @@ const handleSubmit = (e) => {
                   <i className="far fa-envelope" />
                 </span>
                 <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 py-3 w-full border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 py-3 w-full border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Password
               </label>
               <div className="mt-1 relative">
@@ -106,6 +102,41 @@ const handleSubmit = (e) => {
               Sign In
             </button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500 font-open-sans">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={handleGoogleLogin}
+                disabled={isGoogleLoading}
+                type="button"
+                className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white font-medium text-gray-700 hover:bg-gray-50 font-open-sans text-sm"
+              >
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google icon"
+                  className="w-5 h-5 mr-2"
+                />
+                Sign in with Google
+              </button>
+            </div>
+
+            {/* {accessToken ? (
+              <div className="alert alert-success"> Login google Success.</div>
+            ) : (
+              ""
+            )} */}
+          </div>
         </div>
 
         <p className="mt-auto pt-8 text-center text-xs text-gray-500">
