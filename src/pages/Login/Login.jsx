@@ -9,7 +9,6 @@ const Login = () => {
     setEmail,
     password,
     setPassword,
-    isGoogleLoading,
     handleSubmit,
     handleGoogleLogin,
     handleMicrosoftSubmit

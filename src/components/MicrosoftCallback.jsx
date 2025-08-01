@@ -15,6 +15,7 @@ const MicrosoftCallback = () => {
     const accessToken = queryParams.get("access_token");
     const idToken = queryParams.get("id_token");
     const logoutParam = queryParams.get("logout");
+    const backendURL = import.meta.env.VITE_API_URL_GENERAL
 
     if (logoutParam) {
       // Perform logout and redirect to login after 3 seconds
@@ -29,7 +30,7 @@ const MicrosoftCallback = () => {
       const verifyToken = async () => {
         try {
           const response = await axios.get(
-            "http://localhost:9898/api/authazure/verify-token",
+            `${backendURL}/api/authazure/verify-token`,
             {
               headers: {
                 Authorization: `Bearer ${idToken}`,
