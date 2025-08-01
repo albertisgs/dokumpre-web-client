@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
-import axios from "axios";
 import { showAlert } from "../../../utils/alert";
 import { useAuth } from "../../../context/AuthContext";
-import { handleCredentialLogin, handleGoogleLoginSuccess } from "../handler/loginHandler";
+import { handleCredentialLogin, handleGoogleLoginSuccess, handleMicrosoftLogin } from "../handler/loginHandler";
 
 
 export const useLogin = () => {
@@ -17,6 +16,11 @@ export const useLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     await handleCredentialLogin(email, password, updateAuth, navigate);
+  };
+
+  const handleMicrosoftSubmit = async (e) => {
+    e.preventDefault();
+    await handleMicrosoftLogin()
   };
 
   const googleLogin = useGoogleLogin({
@@ -44,5 +48,6 @@ export const useLogin = () => {
     isGoogleLoading,
     handleSubmit,
     handleGoogleLogin,
+    handleMicrosoftSubmit
   };
 };

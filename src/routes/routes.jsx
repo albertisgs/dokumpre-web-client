@@ -4,6 +4,7 @@ import { menu } from '../configs/menu';
 import { generateRoutesFromMenu } from './ListRoutes';
 import Login from '../pages/Login/Login';
 import ProtectedLoginRoute from '../components/protectedLoginRoute';
+import MicrosoftCallback from '../components/MicrosoftCallback';
 
 const filteredRoutes = generateRoutesFromMenu(menu);
 
@@ -20,7 +21,12 @@ export const routeConfig = [
         <Login />
       </ProtectedLoginRoute>
     ),
-  },
+  },{
+    path:'/auth-microsoft/callback',
+    element:(
+      <MicrosoftCallback/>
+    )
+  }
 ];
 
 export const router = createBrowserRouter(routeConfig);

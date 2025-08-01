@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { LogOut } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
 import { googleLogout } from "@react-oauth/google";
+import { MicrosoftLogout } from "../components/logoutMicrosoft";
 
 const Header = () => {
   const location = useLocation()
@@ -11,6 +12,7 @@ const Header = () => {
   const [showMenu, setShowMenu] = useState(false);
   const {logout,authState} = useAuth()
   const menuRef = useRef();
+  const {handleMicrosoftLogout} = MicrosoftLogout()
 
   useEffect(() => { 
     if(location.pathname == '/'){
@@ -29,11 +31,17 @@ const Header = () => {
   }, [location])
 
   const handleLogout = () => {
-    if (authState.authType ==='google') {
-      googleLogout();
+   if (authState.authType === 'microsoft') {
+        handleMicrosoftLogout();
+        logout();
+    } else if (authState.authType === 'google') {
+        googleLogout();
+        logout();
+        navigate('/login');
+    } else if (authState.authType === 'credential') {
+        logout();
+        navigate('/login');
     }
-    logout(); 
-    navigate('/login');
   };
 
   useEffect(() => {

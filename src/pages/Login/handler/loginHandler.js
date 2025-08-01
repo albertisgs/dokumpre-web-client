@@ -80,3 +80,15 @@ export const handleGoogleLoginSuccess = async (response, updateAuth, navigate, s
     setIsLoading(false);
   }
 };
+
+
+export const handleMicrosoftLogin = async() =>{
+  try {
+      const response = await axiosInstance.general.get('api/authazure/login');
+     
+      // Redirect to the Azure AD auth URL
+      window.location.href = response.data.auth_url;
+    } catch (error) {
+      console.error('Failed to fetch auth URL:', error);
+    }
+}

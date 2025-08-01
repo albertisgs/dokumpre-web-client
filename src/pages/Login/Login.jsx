@@ -1,6 +1,7 @@
 
 import { useLogin } from "./hooks/useLogin";
 
+
 const Login = () => {
 
   const {
@@ -11,6 +12,7 @@ const Login = () => {
     isGoogleLoading,
     handleSubmit,
     handleGoogleLogin,
+    handleMicrosoftSubmit
   } = useLogin();
   
   return (
@@ -118,7 +120,6 @@ const Login = () => {
             <div className="mt-6">
               <button
                 onClick={handleGoogleLogin}
-                disabled={isGoogleLoading}
                 type="button"
                 className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white font-medium text-gray-700 hover:bg-gray-50 font-open-sans text-sm"
               >
@@ -130,12 +131,22 @@ const Login = () => {
                 Sign in with Google
               </button>
             </div>
+            <div className="mt-6">
+              <button
+                onClick={handleMicrosoftSubmit}
+                type="button"
+                className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white font-medium text-gray-700 hover:bg-gray-50 font-open-sans text-sm"
+              >
+                <img
+                  src="/microsoft-svgrepo-com.svg"
+                  alt="Google icon"
+                  className="w-5 h-5 mr-2"
+                />
+                SSO with Microsoft
+              </button>
+            </div>
 
-            {/* {accessToken ? (
-              <div className="alert alert-success"> Login google Success.</div>
-            ) : (
-              ""
-            )} */}
+           
           </div>
         </div>
 
