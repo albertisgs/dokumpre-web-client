@@ -1,15 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { menu } from '../configs/menu';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const [currentPath, setCurrentPath] = useState('');
   const location = useLocation();
+  const {authState} = useAuth()
+  const userRole = authState.user?.role;
 
 
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location.pathname]);
+
+    const accessibleMenu = useMemo(() => {
+    if (!userRole) return []; // Or return public routes if any
+    return menu.filter(item => {
+      // If item.roles is not defined, it's a public route
+      // Otherwise, check if the user's role is included in the item.roles array
+      return !item.roles || item.roles.includes(userRole);
+    });
+  }, [userRole]);
 
     const isActive = (path) => {
       return currentPath === path || currentPath.startsWith(path + '/');
@@ -22,7 +34,7 @@ const Sidebar = () => {
       </div>
 
       <div className="flex-1 px-2 md:px-4 py-6 space-y-2 overflow-y-auto sidebar-scroll">
-        {menu.map((item) => (
+        {accessibleMenu.map((item) => (
           <Link
             key={item.path}
             to={item.path}

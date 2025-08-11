@@ -9,6 +9,7 @@ interface IUser {
   googleId?: string;
   picture?: string;
   name?: string;
+  role?:string
 }
 
 type AuthState = {

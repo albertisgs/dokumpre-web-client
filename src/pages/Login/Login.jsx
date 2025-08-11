@@ -1,16 +1,13 @@
 
 import { useLogin } from "./hooks/useLogin";
-
-
 const Login = () => {
-
   const {
     email,
     setEmail,
     password,
     setPassword,
+    handleGoogleBESubmit,
     handleSubmit,
-    handleGoogleLogin,
     handleMicrosoftSubmit
   } = useLogin();
   
@@ -118,7 +115,7 @@ const Login = () => {
 
             <div className="mt-6">
               <button
-                onClick={handleGoogleLogin}
+                onClick={handleGoogleBESubmit}
                 type="button"
                 className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white font-medium text-gray-700 hover:bg-gray-50 font-open-sans text-sm"
               >

@@ -2,8 +2,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { LogOut } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
-import { googleLogout } from "@react-oauth/google";
 import { MicrosoftLogout } from "../components/logoutMicrosoft";
+import { handleGoogleBELogout } from "../pages/Login/handler/logoutHandler";
+
 
 const Header = () => {
   const location = useLocation()
@@ -13,6 +14,7 @@ const Header = () => {
   const {logout,authState} = useAuth()
   const menuRef = useRef();
   const {handleMicrosoftLogout} = MicrosoftLogout()
+  const token = localStorage.getItem('token')
 
   useEffect(() => { 
     if(location.pathname == '/'){
@@ -30,14 +32,20 @@ const Header = () => {
     
   }, [location])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
    if (authState.authType === 'microsoft') {
-        handleMicrosoftLogout();
+        await handleMicrosoftLogout();
         logout();
     } else if (authState.authType === 'google') {
-        googleLogout();
-        logout();
-        navigate('/login');
+        const response = await handleGoogleBELogout(token)
+        if (response && response.status === 'token_revoked') {
+          logout()
+          navigate('/login');
+        }else {
+        // This case handles if the API call works but doesn't return the expected success message
+        alert('Logout failed on the server. Please try again.');
+      }
+        
     } else if (authState.authType === 'credential') {
         logout();
         navigate('/login');

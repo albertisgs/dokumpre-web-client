@@ -46,12 +46,23 @@ const MicrosoftCallback = () => {
             },
           });
 
+          const role = await axiosInstance.general.get(
+            `api/user-management/roles/${profile.data?.id_role}`,
+            {
+              headers: {
+                Authorization: `Bearer ${idToken}`,
+                Accept: "application/json",
+              },
+            }
+          );
+
           if (profile.data) {
             updateAuth(
               {
                 email: profile.data.email,
                 name: profile.data.username,
                 picture: null,
+                role:role.data?.name
               },
               accessToken,
               "microsoft",

@@ -1,17 +1,29 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import "./App.css";
-import { router } from "./routes/routes";
+import { createRouterForUser} from "./routes/routes";
 import { RouterProvider } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { AuthProvider } from "./context/AuthContext";
-import { GoogleOAuthProvider } from "@react-oauth/google";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { menu } from "./configs/menu";
 
-const GoogleClient = import.meta.env.VITE_GOOGLE_CLIENT_ID
+// A new component to handle the dynamic router creation
+const AppRouter = () => {
+  const { authState } = useAuth();
+  const userRole = authState.user?.role;
 
+  // useMemo will re-calculate the router only when the user's role changes
+  const router = useMemo(() => {
+    const accessibleMenu = menu.filter(item => {
+      return !item.roles || item.roles.includes(userRole);
+    });
+    return createRouterForUser(accessibleMenu);
+  }, [userRole]);
+
+  return <RouterProvider router={router} />;
+}
 function App() {
   return (
-    <GoogleOAuthProvider clientId={GoogleClient}>
-      <AuthProvider>
+     <AuthProvider>
         <Suspense
           fallback={
             <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -22,10 +34,9 @@ function App() {
             </div>
           }
         >
-          <RouterProvider router={router} />
+          <AppRouter/>
         </Suspense>
       </AuthProvider>
-    </GoogleOAuthProvider>
   );
 }
 
