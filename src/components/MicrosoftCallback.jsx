@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import axiosInstance from "../axios/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 
@@ -12,12 +11,9 @@ const MicrosoftCallback = () => {
   useEffect(() => {
     // Extract query parameters from the URL
     const queryParams = new URLSearchParams(location.search);
-    const accessToken = queryParams.get("access_token");
-    const idToken = queryParams.get("id_token");
-    const logoutParam = queryParams.get("logout");
-    const backendURL = import.meta.env.VITE_API_URL_GENERAL
+    const status = queryParams.get("status");
 
-    if (logoutParam) {
+    if (status === "login-failed") {
       // Perform logout and redirect to login after 3 seconds
       setTimeout(() => {
         navigate("/login");
@@ -25,35 +21,13 @@ const MicrosoftCallback = () => {
       return;
     }
 
-    if (accessToken) {
+    if (status === "login-success") {
       // Verify token and proceed with authentication
-      const verifyToken = async () => {
+      const verifyUser = async () => {
         try {
-          const response = await axios.get(
-            `${backendURL}/api/authazure/verify-token`,
-            {
-              headers: {
-                Authorization: `Bearer ${idToken}`,
-              },
-            }
-          );
-          console.log("Token verified:", response.data);
-
-          const profile = await axiosInstance.general.get("api/authazure/me", {
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-              Accept: "application/json",
-            },
-          });
-
-          const role = await axiosInstance.general.get(
-            `api/user-management/roles/${profile.data?.id_role}`,
-            {
-              headers: {
-                Authorization: `Bearer ${idToken}`,
-                Accept: "application/json",
-              },
-            }
+          const profile = await axiosInstance.generalSession.get("api/auth/me");
+          const role = await axiosInstance.generalSession.get(
+            `api/user-management/roles/${profile.data?.id_role}`
           );
 
           if (profile.data) {
@@ -62,29 +36,21 @@ const MicrosoftCallback = () => {
                 email: profile.data.email,
                 name: profile.data.username,
                 picture: null,
-                role:role.data?.name
+                role: role.data?.name,
               },
-              accessToken,
-              "microsoft",
-              idToken
+              "microsoft"
             );
-          }
-
-          // Store the token in localStorage
-          localStorage.setItem("token", accessToken);
-          if (idToken) {
-            localStorage.setItem("id_token", idToken);
           }
 
           // Redirect to the protected route (e.g., dashboard)
           navigate("/");
         } catch (error) {
-          console.error("Token verification failed:", error);
+          console.error("verification failed:", error);
           navigate("/login", { state: { error: "Authentication failed" } });
         }
       };
 
-      verifyToken();
+      verifyUser();
     } else {
       navigate("/login", { state: { error: "No token received" } });
     }
@@ -99,7 +65,7 @@ const MicrosoftCallback = () => {
           className="h-8 md:h-10"
         />
       </div>
-      
+
       <div className="flex flex-col items-center space-y-4">
         <div className="relative h-12 w-12">
           {/* Microsoft logo spinner */}
@@ -111,9 +77,9 @@ const MicrosoftCallback = () => {
             />
           </div>
         </div>
-        
+
         <p className="text-gray-600">loading with Microsoft...</p>
-        
+
         <div className="h-1 w-32 overflow-hidden rounded-full bg-gray-200">
           <div className="h-full w-full animate-indeterminate bg-blue-500"></div>
         </div>

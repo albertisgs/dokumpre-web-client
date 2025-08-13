@@ -1,36 +1,28 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import axiosInstance from "../axios/axiosInstance";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MicrosoftLogout } from "./logoutMicrosoft";
 
-
 const ProtectedLoginRoute = ({ children }) => {
-  const {handleMicrosoftLogout} = MicrosoftLogout()
+  const { handleMicrosoftLogout } = MicrosoftLogout();
   const { authState, logout } = useAuth();
-  useEffect(() => {
-    if (authState.authType === "credential" && authState.token) {
-      axiosInstance.general.get('api/auth/verify-token', {
-        headers: {
-          Authorization: `Bearer ${authState.token}`,
-        },
-      })
-      .catch(() => {
-        logout();
-      });
-    }else if (authState.authType === "microsoft" && authState.id_token) {
-      axiosInstance.general.get('api/authazure/verify-token', {
-        headers: {
-          Authorization: `Bearer ${authState.id_token}`,
-        },
-      })
-      .catch(() => {
-        handleMicrosoftLogout()
-      });
-    }
-  }, [authState, logout, handleMicrosoftLogout]);
+  const hasLoggedOut = useRef(false); // prevent infinite logout loop
 
-  if (authState.token) {
+  useEffect(() => {
+    if (!authState.authType && !hasLoggedOut.current) {
+      logout();
+      hasLoggedOut.current = true;
+    } else if (authState.authType === "credential" && !hasLoggedOut.current) {
+      logout();
+      hasLoggedOut.current = true;
+    } else if (authState.authType === "microsoft" && !hasLoggedOut.current) {
+      handleMicrosoftLogout();
+      hasLoggedOut.current = true;
+    }
+  }, [authState.authType, logout, handleMicrosoftLogout]);
+
+  // If user already has authType, go home
+  if (authState.authType) {
     return <Navigate to="/" replace />;
   }
 

@@ -7,7 +7,7 @@ export const MicrosoftLogout = () => {
   const handleMicrosoftLogout = async () => {
     try {
       // Call the backend logout endpoint
-      const response = await axiosInstance.general.get("/api/authazure/logout");
+      const response = await axiosInstance.generalSession.get("/api/authazure/logout");
       const { auth_url } = response.data;
       window.location.href = auth_url;
       // Clear tokens from localStorage

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
 const fetchRoles = async () => {
-  const response = await axiosInstance.general.get('/api/user-management/roles/', {
+  const response = await axiosInstance.generalSession.get('/api/user-management/roles/', {
   });
   return response.data;
 };

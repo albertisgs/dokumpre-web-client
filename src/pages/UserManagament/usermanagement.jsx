@@ -55,9 +55,7 @@ const UserManagement = () => {
   // Mutation for handling the DELETE API call
   const deleteMutation = useMutation({
     mutationFn: (userId) => {
-      return axiosInstance.general.delete(`/api/user-management/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      return axiosInstance.generalSession.delete(`/api/user-management/${userId}`);
     },
     onSuccess: () => {
       SuccessPopOut("Success", "success", "User deleted successfully.");

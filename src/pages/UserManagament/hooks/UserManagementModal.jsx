@@ -33,20 +33,10 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
     mutationFn: (userData) => {
       if (isEditMode) {
         // UPDATE (PUT) operation
-        return axiosInstance.general.put(`/api/user-management/${user.id}`, { id_role: userData.id_role }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        return axiosInstance.generalSession.put(`/api/user-management/${user.id}`, userData);
       } else {
         // CREATE (POST) operation
-        return axiosInstance.general.post('/api/user-management/', userData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        return axiosInstance.generalSession.post('/api/user-management/', userData);
       }
     },
     onSuccess: () => {

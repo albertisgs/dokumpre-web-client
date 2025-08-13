@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { LogOut } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
 import { MicrosoftLogout } from "../components/logoutMicrosoft";
-import { handleGoogleBELogout } from "../pages/Login/handler/logoutHandler";
+import { handleLogoutSession } from "../pages/Login/handler/logoutHandler";
 
 
 const Header = () => {
@@ -14,7 +14,7 @@ const Header = () => {
   const {logout,authState} = useAuth()
   const menuRef = useRef();
   const {handleMicrosoftLogout} = MicrosoftLogout()
-  const token = localStorage.getItem('token')
+
 
   useEffect(() => { 
     if(location.pathname == '/'){
@@ -29,24 +29,24 @@ const Header = () => {
     else if(location.pathname == '/market-competitor-insight'){
       setTitle('Market Competitor Insight')
     }
+    else if(location.pathname == '/user-management'){
+      setTitle('User Managament')
+    }
     
   }, [location])
 
   const handleLogout = async () => {
    if (authState.authType === 'microsoft') {
         await handleMicrosoftLogout();
+        await handleLogoutSession()
         logout();
     } else if (authState.authType === 'google') {
-        const response = await handleGoogleBELogout(token)
-        if (response && response.status === 'token_revoked') {
-          logout()
-          navigate('/login');
-        }else {
-        // This case handles if the API call works but doesn't return the expected success message
-        alert('Logout failed on the server. Please try again.');
-      }
+        await handleLogoutSession()
+        logout();
+        navigate('/login');
         
     } else if (authState.authType === 'credential') {
+        await handleLogoutSession()
         logout();
         navigate('/login');
     }

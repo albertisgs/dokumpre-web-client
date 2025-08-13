@@ -8,47 +8,35 @@ export const handleCredentialLogin = async (
   navigate
 ) => {
   try {
-    const token = await axiosInstance.general.post("api/auth/sign-in", {
+    const login = await axiosInstance.generalSession.post("api/auth/sign-in", {
       email,
       password,
     });
-
-    const profile = await axiosInstance.general.get("api/auth/me", {
-      headers: {
-        Authorization: `Bearer ${token.data.access_token}`,
-        Accept: "application/json",
-      },
-    });
-
-    const role = await axiosInstance.general.get(
-      `api/user-management/roles/${profile.data?.id_role}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token.data.access_token}`,
-          Accept: "application/json",
-        },
-      }
-    );
-
-    if (profile.data) {
-      updateAuth(
-        {
-          email: profile.data.email,
-          name: profile.data.username,
-          picture: null,
-          role: role.data?.name,
-        },
-        token.data.access_token,
-        "credential"
+    if (login.status == 200) {
+      const profile = await axiosInstance.generalSession.get("api/auth/me");
+      const role = await axiosInstance.generalSession.get(
+        `api/user-management/roles/${profile.data?.id_role}`
       );
-      localStorage.setItem("token", token.data.access_token);
-      navigate("/");
-    } else {
-      showAlert({
-        title: "Login Failed",
-        text: "Invalid email or password.",
-        icon: "error",
-      });
+
+      if (profile.data) {
+        updateAuth(
+          {
+            email: profile.data.email,
+            name: profile.data.username,
+            picture: null,
+            role: role.data?.name,
+          },
+          "credential"
+        );
+        
+        navigate("/");
+      } else {
+        showAlert({
+          title: "Login Failed",
+          text: "Invalid email or password.",
+          icon: "error",
+        });
+      }
     }
   } catch (error) {
     showAlert({

@@ -12,13 +12,13 @@ const Layout = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const auth = localStorage.getItem('authType');
 
-    if (token && location.pathname === '/login') {
+    if (auth && location.pathname === '/login') {
       navigate('/');
     }
 
-    if (!token && location.pathname !== '/login') {
+    if (!auth && location.pathname !== '/login') {
       navigate('/login');
     }
   }, [location.pathname, navigate]);

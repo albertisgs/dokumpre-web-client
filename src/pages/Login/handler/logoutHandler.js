@@ -20,3 +20,12 @@ export const handleGoogleBELogout = async (token) => {
       throw error;
     } 
   }
+
+
+export const handleLogoutSession = async() =>{
+  const response = await axiosInstance.generalSession.post('api/auth/logout');
+  if (response.status == 200) {
+    return 'success'
+  }
+
+}
