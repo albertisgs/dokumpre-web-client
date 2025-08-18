@@ -3,7 +3,7 @@ import axiosInstance from '../../../axios/axiosInstance';
 
 const useViewFile = () => {
   const viewFile = async (id) => {
-    const res = await axiosInstance.general.get(`/api/knowledge/knowledge-path?id=${id}`, {
+    const res = await axiosInstance.generalSession.get(`/api/knowledge/knowledge-path?id=${id}`, {
       responseType: 'blob', 
     });
     return res.data; 

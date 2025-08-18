@@ -1,10 +1,12 @@
-import { createBrowserRouter } from 'react-router-dom';
-import Layout from '../layouts/Layout';
-import { generateRoutesFromMenu } from './ListRoutes';
-import Login from '../pages/Login/Login';
-import ProtectedLoginRoute from '../components/protectedLoginRoute';
-import MicrosoftCallback from '../components/MicrosoftCallback';
-import GoogleCallback from '../components/GoogleCallback';
+import { createBrowserRouter } from "react-router-dom";
+import Layout from "../layouts/Layout";
+import { generateRoutesFromMenu } from "./ListRoutes";
+import Login from "../pages/Login/Login";
+
+import MicrosoftCallback from "../components/callback/MicrosoftCallback";
+import GoogleCallback from "../components/callback/GoogleCallback";
+import ProtectedLoginRoute from "../components/protected/protectedLoginRoute";
+import NotFoundPage from "../pages/NotFound/Notfoundpage";
 
 // This function now creates the entire route configuration dynamically
 export const createRouterForUser = (userMenu) => {
@@ -12,12 +14,12 @@ export const createRouterForUser = (userMenu) => {
 
   const routeConfig = [
     {
-      path: '/',
+      path: "/",
       element: <Layout />,
       children: filteredRoutes,
     },
     {
-      path: '/login',
+      path: "/login",
       element: (
         <ProtectedLoginRoute>
           <Login />
@@ -25,12 +27,16 @@ export const createRouterForUser = (userMenu) => {
       ),
     },
     {
-      path: '/auth-microsoft/callback',
+      path: "/auth-microsoft/callback",
       element: <MicrosoftCallback />,
     },
     {
-      path: '/auth-google/callback',
+      path: "/auth-google/callback",
       element: <GoogleCallback />,
+    },
+    {
+      path: "*",
+      element: <NotFoundPage />,
     },
   ];
 

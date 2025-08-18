@@ -1,36 +1,40 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { menu } from '../configs/menu';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect, useMemo } from "react";
+
+import { Link, useLocation } from "react-router-dom";
+
+import { menu } from "../configs/menu";
+
+import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
-  const [currentPath, setCurrentPath] = useState('');
-  const location = useLocation();
-  const {authState} = useAuth()
-  const userRole = authState.user?.role;
+  const [currentPath, setCurrentPath] = useState("");
 
+  const location = useLocation();
+
+  const { authState } = useAuth();
 
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location.pathname]);
 
-    const accessibleMenu = useMemo(() => {
-    if (!userRole) return []; // Or return public routes if any
-    return menu.filter(item => {
-      // If item.roles is not defined, it's a public route
-      // Otherwise, check if the user's role is included in the item.roles array
-      return !item.roles || item.roles.includes(userRole);
-    });
-  }, [userRole]);
+  const accessibleMenu = useMemo(() => {
+    // PERBAIKAN: Logika dipindahkan ke dalam useMemo
 
-    const isActive = (path) => {
-      return currentPath === path || currentPath.startsWith(path + '/');
-    };
+    const userAccessList = authState.user?.access_list || [];
+
+    // Filter menu berdasarkan hak akses dari backend
+
+    return menu.filter((item) => userAccessList.includes(item.identifier));
+  }, [authState.user]); // PERBAIKAN: Bergantung langsung pada objek user
+
+  const isActive = (path) => {
+    return currentPath === path || currentPath.startsWith(path + "/");
+  };
 
   return (
-    <nav className="w-20 md:w-72 bg-[#ebf2ff] text-[#374151] flex flex-col fixed h-full shadow-md transition-all duration-300">
+    <nav className="fixed top-0 left-0 h-screen w-20 md:w-72 bg-[#ebf2ff] text-[#374151] flex flex-col shadow-md transition-all duration-300">
       <div className="flex items-center justify-center md:justify-start h-20 px-4 mt-6 mb-6">
-          <img src="/Dokuprime.svg" alt="Logo" className="w-[90%] pl-4" />
+        <img src="/Dokuprime.svg" alt="Logo" className="w-[90%] pl-4" />
       </div>
 
       <div className="flex-1 px-2 md:px-4 py-6 space-y-2 overflow-y-auto sidebar-scroll">
@@ -40,11 +44,11 @@ const Sidebar = () => {
             to={item.path}
             className={`group flex items-center justify-center md:justify-start px-3 md:px-4 py-2.5 rounded-lg mx-2 transition-colors duration-200 font-open-sans text-[16px] font-medium sidebar-link ${
               isActive(item.path)
-                ? 'bg-blue-100 text-blue-800'
-                : 'hover:bg-blue-50 hover:text-blue-700'
+                ? "bg-blue-100 text-blue-800"
+                : "hover:bg-blue-50 hover:text-blue-700"
             }`}
           >
-            {typeof item.icon === 'string' ? (
+            {typeof item.icon === "string" ? (
               <img
                 src={item.icon}
                 alt={`${item.title} Icon`}

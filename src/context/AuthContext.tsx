@@ -1,130 +1,108 @@
-// src/context/AuthContext.tsx
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import axiosInstance from '../axios/axiosInstance';
 
+// Mendefinisikan tipe data untuk metode autentikasi
 type AuthType = 'credential' | 'google' | 'microsoft' | null;
 
+// Mendefinisikan struktur data untuk pengguna
 interface IUser {
   email: string;
-  password?: string;
-  googleId?: string;
-  picture?: string;
   name?: string;
+  picture?: string;
   role?: string;
+  access_list?: string[];
+  id_role?: string;
 }
 
+// Mendefinisikan struktur state autentikasi
 type AuthState = {
-  user: IUser;
+  user: IUser | null;
   authType: AuthType;
 };
 
+// Mendefinisikan tipe untuk context
 type AuthContextType = {
   authState: AuthState;
   updateAuth: (user: IUser, authType: AuthType) => void;
   logout: () => void;
+  verifySession: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthProviderProps = {
   children: ReactNode;
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // Initialize state from localStorage. This is the single source of truth.
   const [authState, setAuthState] = useState<AuthState>(() => {
     const authType = localStorage.getItem('authType') as AuthType || null;
-    // Ensure that if localStorage is empty, it returns a valid initial object.
     const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : { email: '' };
+    const user = userString ? JSON.parse(userString) : null;
     
-    return {
-      user,
-      authType
-    };
+    return { user, authType };
   });
 
-   useEffect(() => {
-    verifySession();
+  // Fungsi logout dibuat stabil dengan useCallback
+  const logout = useCallback(() => {
+    localStorage.removeItem('authType');
+    localStorage.removeItem('user');
+    setAuthState({
+      user: null,
+      authType: null,
+    });
   }, []);
 
-  const verifySession = async () => {
-    // Get the stored auth type to check if a session should exist.
+  // Fungsi updateAuth dibuat stabil dengan useCallback
+  const updateAuth = useCallback((user: IUser, authType: AuthType) => {
+    localStorage.setItem('authType', authType || '');
+    localStorage.setItem('user', JSON.stringify(user));
+    setAuthState({ user, authType });
+  }, []);
+
+  // Fungsi verifySession dibuat stabil dengan useCallback
+  const verifySession = useCallback(async () => {
     const storedAuthType = localStorage.getItem('authType') as AuthType;
     if (!storedAuthType) {
-      return; // No session to verify, so we exit early.
+      return; // Tidak ada sesi untuk diverifikasi
     }
 
     try {
-      // 1. Fetch the user's profile from the '/me' endpoint.
+      // 1. Ambil profil pengguna dari endpoint /me
       const profile = await axiosInstance.generalSession.get("api/auth/me");
 
       if (profile.data) {
-        let userRole = 'Default'; // Provide a default role
-
-        // 2. If a role ID is present, fetch the specific role name.
-        if (profile.data.id_role) {
-          const role = await axiosInstance.generalSession.get(
-            `api/user-management/roles/${profile.data.id_role}`
-          );
-          if(role.data?.name) {
-            userRole = role.data.name;
-          }
-        }
-
-        // 3. We have fresh data; update the context and localStorage.
+          // 3. Gabungkan data untuk membuat objek pengguna yang lengkap
         const freshUser: IUser = {
           email: profile.data.email,
           name: profile.data.username,
-          // Use picture from profile if it exists, otherwise it will be undefined
-          picture: profile.data.photo_url, 
-          role: userRole,
+          picture: profile.data.photo_url,
+          access_list: profile.data.access_list,
+          role: profile.data?.role_name,
+          id_role: profile.data.id_role,
         };
         
-        // Use the authType that's already stored, don't hardcode it.
+        // 4. Perbarui state dan localStorage
         updateAuth(freshUser, storedAuthType);
         
       } else {
-        // If the API returns success but no data, treat it as an error.
-        throw new Error("Profile data is empty, session invalid.");
+        throw new Error("Data profil tidak lengkap, sesi tidak valid.");
       }
 
     } catch (error) {
-      // If any API call fails (e.g., returns 401), the session is invalid.
-      // Clear all stale authentication data from the client.
-      console.error("Session verification failed, clearing local auth state:", error);
-      logout()
-      localStorage.removeItem('authType');
-      localStorage.removeItem('user');
-      setAuthState({
-        user: { email: '' },
-        authType: null,
-      });
+      console.error("Verifikasi sesi gagal, membersihkan state lokal:", error);
+      logout();
+      window.location.href = '/login';
     }
-  };
+  }, [logout, updateAuth]);
 
-  const updateAuth = (user: IUser, authType: AuthType) => {
-    localStorage.setItem('authType', authType || '');
-    localStorage.setItem('user', JSON.stringify(user));
-    
-    setAuthState({ 
-      user, 
-      authType 
-    });
-  };
-
-  const logout = () => {
-      // Always clear local data regardless of server response.
-      localStorage.removeItem('authType');
-      localStorage.removeItem('user');
-      setAuthState({
-        user: { email: '' },
-        authType: null,
-      });
-  };
+  // Efek ini hanya berjalan sekali saat aplikasi dimuat
+  useEffect(() => {
+    verifySession();
+  }, [verifySession]);
 
   return (
-    <AuthContext.Provider value={{ authState, updateAuth, logout }}>
+    <AuthContext.Provider value={{ authState, updateAuth, logout, verifySession }}>
       {children}
     </AuthContext.Provider>
   );

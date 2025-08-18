@@ -7,7 +7,7 @@ const MCInsightPage = lazy(() => import('../pages/Market&CompetitorInsight/MCIns
 const UploadPage = lazy(()=>import('../pages/UploadDocument/uploadpage'))
 const SippPage = lazy(()=>import('../pages/SippCaseDetails/sippcasepage'))
 const UserManagement = lazy(()=>import('../pages/UserManagament/usermanagement'))
-
+const RoleManagementPage = lazy(()=>import('../pages/RoleManagement/RoleManagement'))
 export const menu = [
   {
     title: 'Dashboard',
@@ -15,7 +15,6 @@ export const menu = [
     identifier: 'dashboard',
     icon: '/dashboard-icon.svg',
     component: DashboardPage,
-    roles: ['superadmin', 'legal','finance'],
   },
   {
     title: 'Knowledge Base',
@@ -23,7 +22,7 @@ export const menu = [
     identifier: 'knowledge-base',
     icon: '/upload-document.svg',
     component: KnowledgeBasePage,
-    roles: ['superadmin', 'legal', 'finance'],
+
   },
     {
     title: 'Upload Document',
@@ -31,7 +30,7 @@ export const menu = [
     identifier: 'upload-document',
     icon: '/cloud.svg',
     component: UploadPage,
-    roles: ['superadmin', 'legal',],
+
   },
   {
     title: 'Prompt Management',
@@ -39,7 +38,7 @@ export const menu = [
     identifier: 'prompt-management',
     icon: '/prompt-management.svg',
     component: PromptManagementPage,
-    roles: ['superadmin', 'legal', 'finance'],
+
   },
   {
     title: 'Market & Competitor Insight',
@@ -47,7 +46,7 @@ export const menu = [
     identifier: 'market-competitor-insight',
     icon: '/comparison.svg',
     component: MCInsightPage,
-    roles: ['superadmin', 'legal', 'finance'],
+
   },
   {
     title: 'SIPP Case Details',
@@ -55,7 +54,7 @@ export const menu = [
     identifier: 'sipp-case-details',
     icon: '/analysis.svg',
     component: SippPage,
-    roles: ['superadmin', 'legal'],
+
   },
   {
     title: 'User Management',
@@ -63,6 +62,13 @@ export const menu = [
     identifier: 'user-management',
     icon: '/user.svg',
     component: UserManagement,
+  },
+   {
+    title: 'Role Management',
+    path: '/role-management',
+    identifier: 'role-management',
+    icon: '/shield.svg', // Ganti dengan ikon yang sesuai
+    component: RoleManagementPage,
     roles: ['superadmin'],
   },
 

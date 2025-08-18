@@ -2,39 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
 const fetchSyncData = async () => {
-  const usersResponse = await axiosInstance.generalSession.get('/api/user-management/');
-  const users = usersResponse.data;
-
-  if (!Array.isArray(users) || users.length === 0) {
-    return [];
-  }
-
-  const rolePromises = users.map(user =>
-    axiosInstance.generalSession.get(`/api/user-management/roles/${user.id_role}`)
-  );
-
-  const roleResponses = await Promise.all(rolePromises);
-
-
-  const enhancedUsers = users.map((user, index) => {
-   
-    const roleName = roleResponses[index].data?.name || 'Unknown Role';
-    return {
-      ...user,
-      role_name: roleName,
-    };
-  });
-
-  enhancedUsers.sort((a, b) => a.email.localeCompare(b.email));
-
-  return enhancedUsers;
+  // PERBAIKAN: Hanya satu panggilan API yang dibutuhkan sekarang.
+  const response = await axiosInstance.generalSession.get('/api/user-management/');
+  // Data sudah termasuk 'role_name', jadi tidak perlu proses tambahan.
+  return response.data;
 };
 
 const useGetData = () => {
   return useQuery({
     queryKey: ['syncUserMngmtData'],
-    queryFn: ()=> fetchSyncData(),
+    queryFn: fetchSyncData, // Langsung panggil fungsi yang sudah disederhanakan
   });
 };
+
 
 export default useGetData;

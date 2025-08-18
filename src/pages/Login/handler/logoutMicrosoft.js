@@ -1,6 +1,7 @@
 // src/components/Logout.jsx
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../axios/axiosInstance";
+import axiosInstance from "../../../axios/axiosInstance";
+
 
 export const MicrosoftLogout = () => {
   const navigate = useNavigate();

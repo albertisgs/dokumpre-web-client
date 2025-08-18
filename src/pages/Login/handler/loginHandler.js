@@ -25,6 +25,8 @@ export const handleCredentialLogin = async (
             name: profile.data.username,
             picture: null,
             role: role.data?.name,
+            access_list: profile.data.access_list,
+            id_role: profile.data.id_role
           },
           "credential"
         );

@@ -5,7 +5,7 @@ const useGetDetailData = (id) => {
   return useQuery({
     queryKey: ['get-detail', id],
     queryFn: async () => {
-      const res = await axiosInstance.general.get(`/api/request/get-detail?id=${id}`);
+      const res = await axiosInstance.generalSession.get(`/api/request/get-detail?id=${id}`);
       return res.data.data;
     },
     enabled: !!id,

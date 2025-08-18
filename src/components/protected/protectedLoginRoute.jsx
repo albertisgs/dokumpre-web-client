@@ -1,13 +1,14 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { useEffect, useRef } from "react";
-import { MicrosoftLogout } from "./logoutMicrosoft";
+import { useAuth } from "../../context/AuthContext";
+import { MicrosoftLogout } from "../../pages/Login/handler/logoutMicrosoft";
+import { useNavigate } from "react-router-dom";
+
 
 const ProtectedLoginRoute = ({ children }) => {
   const { handleMicrosoftLogout } = MicrosoftLogout();
   const { authState, logout } = useAuth();
   const hasLoggedOut = useRef(false); // prevent infinite logout loop
-
+  const navigate = useNavigate()
   useEffect(() => {
     if (!authState.authType && !hasLoggedOut.current) {
       logout();
@@ -23,7 +24,7 @@ const ProtectedLoginRoute = ({ children }) => {
 
   // If user already has authType, go home
   if (authState.authType) {
-    return <Navigate to="/" replace />;
+    return navigate('/', { replace: true }); ;
   }
 
   return children;

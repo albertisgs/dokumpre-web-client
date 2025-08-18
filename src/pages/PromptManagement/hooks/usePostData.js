@@ -6,7 +6,7 @@ const usePostData = () => {
 
   return useMutation({
     mutationFn: async (newData) => {
-      const response = await axiosInstance.general.post('/api/request/', newData);
+      const response = await axiosInstance.generalSession.post('/api/request/', newData);
       return response.data;
     },
     onSuccess: (data, variables, context) => {
