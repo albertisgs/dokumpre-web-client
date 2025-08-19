@@ -9,9 +9,9 @@ interface IUser {
   email: string;
   name?: string;
   picture?: string;
-  role?: string;
+  team?: string;
   access_list?: string[];
-  id_role?: string;
+  id_team?: string;
 }
 
 // Mendefinisikan struktur state autentikasi
@@ -78,8 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: profile.data.username,
           picture: profile.data.photo_url,
           access_list: profile.data.access_list,
-          role: profile.data?.role_name,
-          id_role: profile.data.id_role,
+          team: profile.data?.team_name,
+          id_team: profile.data.id_team,
         };
         
         // 4. Perbarui state dan localStorage

@@ -23,9 +23,9 @@ export const useOAuthCallback = (provider,status) => {
               email: profile.data.email,
               name: profile.data.username,
               picture: profile.data.photo_url || null, // Handle jika picture tidak ada
-              role: profile.data?.role_name,
+              team: profile.data?.team_name,
               access_list: profile.data.access_list,
-              id_role: profile.data.id_role
+              id_team: profile.data.id_team
             },
             provider
           );

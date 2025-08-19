@@ -5,41 +5,41 @@ import axiosInstance from '../../../axios/axiosInstance';
 
 // Daftar hak akses yang valid, harus sama dengan yang ada di backend
 const VALID_ACCESS_RIGHTS = [
-    "dashboard","knowledge-base","market-competitor-insight","prompt-management","upload-document","sipp-case-details","user-management","role-management"
+    "dashboard","knowledge-base","market-competitor-insight","prompt-management","upload-document","sipp-case-details","user-management","team-management"
 ];
 
-const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
+const TeamManagementModal = ({ isOpen, onClose, team, onSuccess }) => {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [access, setAccess] = useState(new Set());
   const [error, setError] = useState('');
-  const isEditMode = !!role;
+  const isEditMode = !!team;
 
   useEffect(() => {
     if (isOpen) {
       if (isEditMode) {
-        setName(role.name || '');
-        setAccess(new Set(role.access || []));
+        setName(team.name || '');
+        setAccess(new Set(team.access || []));
       } else {
         setName('');
         setAccess(new Set());
       }
       setError('');
     }
-  }, [isOpen, role, isEditMode]);
+  }, [isOpen, team, isEditMode]);
 
   const mutation = useMutation({
-    mutationFn: (roleData) => {
-      const payload = { ...roleData, access: Array.from(roleData.access) };
+    mutationFn: (teamData) => {
+      const payload = { ...teamData, access: Array.from(teamData.access) };
       if (isEditMode) {
-        return axiosInstance.generalSession.put(`/api/roles-management/${role.id}`, payload);
+        return axiosInstance.generalSession.put(`/api/teams-management/${team.id}`, payload);
       } else {
-        return axiosInstance.generalSession.post('/api/roles-management/', payload);
+        return axiosInstance.generalSession.post('/api/teams-management/', payload);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rolesWithUserCount'] });
-      onSuccess(isEditMode ? 'Role updated successfully!' : 'Role created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['teamsWithUserCount'] });
+      onSuccess(isEditMode ? 'Team updated successfully!' : 'Team created successfully!');
       onClose();
     },
     onError: (err) => {
@@ -62,7 +62,7 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name) {
-      setError('Role name is required.');
+      setError('Team name is required.');
       return;
     }
     setError('');
@@ -74,10 +74,10 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   return (
     <div className="modal-overlay">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
-        <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit Role' : 'Create New Role'}</h2>
+        <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit Team' : 'Create New Team'}</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Role Name</label>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Team Name</label>
             <input
               type="text"
               id="name"
@@ -111,7 +111,7 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
             <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
             <button type="submit" disabled={mutation.isPending} className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-blue-300 flex items-center">
               {mutation.isPending && <Loader2 className="animate-spin w-5 h-5 mr-2" />}
-              {isEditMode ? 'Save Changes' : 'Create Role'}
+              {isEditMode ? 'Save Changes' : 'Create Team'}
             </button>
           </div>
         </form>
@@ -120,4 +120,4 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   );
 };
 
-export default RoleManagementModal;
+export default TeamManagementModal;

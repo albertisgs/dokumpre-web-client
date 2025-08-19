@@ -14,8 +14,8 @@ export const handleCredentialLogin = async (
     });
     if (login.status == 200) {
       const profile = await axiosInstance.generalSession.get("api/auth/me");
-      const role = await axiosInstance.generalSession.get(
-        `api/user-management/roles/${profile.data?.id_role}`
+      const team = await axiosInstance.generalSession.get(
+        `api/user-management/teams/${profile.data?.id_team}`
       );
 
       if (profile.data) {
@@ -24,9 +24,9 @@ export const handleCredentialLogin = async (
             email: profile.data.email,
             name: profile.data.username,
             picture: null,
-            role: role.data?.name,
+            team: team.data?.name,
             access_list: profile.data.access_list,
-            id_role: profile.data.id_role
+            id_team: profile.data.id_team
           },
           "credential"
         );

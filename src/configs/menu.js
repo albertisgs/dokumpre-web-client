@@ -7,7 +7,7 @@ const MCInsightPage = lazy(() => import('../pages/Market&CompetitorInsight/MCIns
 const UploadPage = lazy(()=>import('../pages/UploadDocument/uploadpage'))
 const SippPage = lazy(()=>import('../pages/SippCaseDetails/sippcasepage'))
 const UserManagement = lazy(()=>import('../pages/UserManagament/usermanagement'))
-const RoleManagementPage = lazy(()=>import('../pages/RoleManagement/RoleManagement'))
+const TeamManagementPage = lazy(()=>import('../pages/TeamManagement/TeamManagement'))
 export const menu = [
   {
     title: 'Dashboard',
@@ -64,12 +64,12 @@ export const menu = [
     component: UserManagement,
   },
    {
-    title: 'Role Management',
-    path: '/role-management',
-    identifier: 'role-management',
+    title: 'Team Management',
+    path: '/team-management',
+    identifier: 'team-management',
     icon: '/shield.svg', // Ganti dengan ikon yang sesuai
-    component: RoleManagementPage,
-    roles: ['superadmin'],
+    component: TeamManagementPage,
+    teams: ['superadmin'],
   },
 
 ];

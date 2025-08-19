@@ -2,18 +2,7 @@ import useGetData from "./hooks/useGetData";
 // import useViewFile from "./hooks/useViewFile";
 
 const KnowledgeBase = () => {
-  const { data, loading, error, refetch } = useGetData();
-  // const { viewFile } = useViewFile();
-
-  // const handleView = async (id) => {
-  //   try {
-  //     const blob = await viewFile(id);
-  //     const fileURL = URL.createObjectURL(blob);
-  //     window.open(fileURL);
-  //   } catch (err) {
-  //     console.error("Failed to load file:", err);
-  //   }
-  // };
+  const { data, loading, error } = useGetData();
 
   return (
     <div>

@@ -4,7 +4,7 @@ import axiosInstance from '../../../axios/axiosInstance';
 const fetchSyncData = async () => {
   // PERBAIKAN: Hanya satu panggilan API yang dibutuhkan sekarang.
   const response = await axiosInstance.generalSession.get('/api/user-management/');
-  // Data sudah termasuk 'role_name', jadi tidak perlu proses tambahan.
+  // Data sudah termasuk 'team_name', jadi tidak perlu proses tambahan.
   return response.data;
 };
 

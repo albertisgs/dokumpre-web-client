@@ -5,10 +5,11 @@ import "./App.css";
 import { createRouterForUser } from "./routes/routes";
 import { RouterProvider } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { AuthProvider, useAuth } from "./context/AuthContext";
 import { menu } from "./configs/menu";
 import Pusher from "pusher-js";
 import toast, { Toaster } from "react-hot-toast";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
 
 // Komponen ini menangani routing dinamis berdasarkan hak akses pengguna.
 const AppRouter = () => {
@@ -44,23 +45,23 @@ const AppContent = () => {
       }
     });
 
-    // 2. Channel BARU untuk update hak akses role
-    const roleChannel = pusher.subscribe('role-updates');
-    roleChannel.bind('access-changed', (data) => {
-      // Jika role yang berubah adalah role pengguna saat ini,
+    // 2. Channel BARU untuk update hak akses team
+    const teamChannel = pusher.subscribe('team-updates');
+    teamChannel.bind('access-changed', (data) => {
+      // Jika team yang berubah adalah team pengguna saat ini,
       // panggil verifySession untuk memuat ulang profil dan hak akses terbaru.
-      if (data.role_id === authState.user.id_role) { // Asumsi id_role ada di user object
+      if (data.team_id === authState.user.id_team) { // Asumsi id_team ada di user object
         console.log("Hak akses Anda diubah. Memuat ulang sesi...");
         toast.success('Admin Memperbarui hak akses..');
         verifySession(); // Panggil fungsi dari context
       }
     });
 
-    //3.role user diubah
+    //3.team user diubah
     const userChannelName = `user-updates-${user.email}-${authState.authType}`;
     const userChannel = pusher.subscribe(userChannelName);
 
-    userChannel.bind('role-changed', (data) => {
+    userChannel.bind('team-changed', (data) => {
       console.log("Perubahan peran terdeteksi:", data.message);
       toast.success('Peran Anda diperbarui oleh admin, memuat ulang sesi...');
       // Panggil verifySession untuk memuat ulang profil dan hak akses terbaru
@@ -70,11 +71,11 @@ const AppContent = () => {
     // Cleanup saat komponen unmount atau saat pengguna logout
     return () => {
       pusher.unsubscribe("Scrapping-notification");
-      pusher.unsubscribe("role-updates");
+      pusher.unsubscribe("team-updates");
       pusher.disconnect();
     };
     // Efek ini akan berjalan lagi jika authType berubah (login/logout)
-  }, [authState.authType, authState.user?.id_role, verifySession, PusherKey, PusherCluster, authState.user]);
+  }, [authState.authType, authState.user?.id_team, verifySession, PusherKey, PusherCluster, authState.user]);
 
   return <AppRouter />;
 }

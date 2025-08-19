@@ -1,62 +1,62 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, Trash2, Edit, Plus, Users } from "lucide-react";
-import useGetRolesData from "./hooks/useGetRolesData";
-import RoleManagementModal from "./components/RoleManagementModal";
+import useGetTeamsData from "./hooks/useGetTeamsData";
+import TeamManagementModal from "./components/TeamManagementModal";
 import ConfirmationModal from "./components/ConfirmationModal";
 import { SuccessPopOut } from "../../components/SuccessPopOut";
 import axiosInstance from "../../axios/axiosInstance";
 
 
-const RoleManagement = () => {
+const TeamManagement = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [roleToDelete, setRoleToDelete] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teamToDelete, setTeamToDelete] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Menggunakan hook kustom untuk mengambil data role beserta jumlah pengguna
-  const { data: roles, isLoading, isError } = useGetRolesData();
+  // Menggunakan hook kustom untuk mengambil data team beserta jumlah pengguna
+  const { data: teams, isLoading, isError } = useGetTeamsData();
 
-  // Mutation untuk menghapus role
+  // Mutation untuk menghapus team
   const deleteMutation = useMutation({
-    mutationFn: (roleId) => axiosInstance.generalSession.delete(`/api/roles-management/${roleId}`),
+    mutationFn: (teamId) => axiosInstance.generalSession.delete(`/api/teams-management/${teamId}`),
     onSuccess: () => {
-      SuccessPopOut("Success", "success", "Role deleted successfully.");
-      queryClient.invalidateQueries({ queryKey: ['rolesWithUserCount'] });
+      SuccessPopOut("Success", "success", "Team deleted successfully.");
+      queryClient.invalidateQueries({ queryKey: ['teamsWithUserCount'] });
     },
     onError: (error) => {
-      SuccessPopOut("Error", "error", error.response?.data?.detail || "Failed to delete role.");
+      SuccessPopOut("Error", "error", error.response?.data?.detail || "Failed to delete team.");
     },
     onSettled: () => {
       setIsConfirmOpen(false);
-      setRoleToDelete(null);
+      setTeamToDelete(null);
     },
   });
 
-  const filteredData = roles?.filter(
+  const filteredData = teams?.filter(
     (item) => item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenCreateModal = () => {
-    setSelectedRole(null);
+    setSelectedTeam(null);
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (role) => {
-    setSelectedRole(role);
+  const handleOpenEditModal = (team) => {
+    setSelectedTeam(team);
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (role) => {
-    setRoleToDelete(role);
+  const handleDeleteClick = (team) => {
+    setTeamToDelete(team);
     setIsConfirmOpen(true);
   };
 
   const handleConfirmDelete = () => {
-    if (roleToDelete) {
-      deleteMutation.mutate(roleToDelete.id);
+    if (teamToDelete) {
+      deleteMutation.mutate(teamToDelete.id);
     }
   };
 
@@ -71,7 +71,7 @@ const RoleManagement = () => {
           <div className="relative w-full sm:w-auto">
             <input
               type="text"
-              placeholder="Search by role name..."
+              placeholder="Search by team name..."
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full sm:w-80"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -85,7 +85,7 @@ const RoleManagement = () => {
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center w-full sm:w-auto justify-center"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Add New Role
+            Add New Team
           </button>
         </div>
 
@@ -93,7 +93,7 @@ const RoleManagement = () => {
           <table className="min-w-full">
             <thead className="bg-gray-100">
               <tr className="text-left text-sm font-semibold text-gray-600">
-                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Role Name</th>
+                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Team Name</th>
                 <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Users</th>
                 <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Access Rights</th>
                 <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10 text-center">Actions</th>
@@ -110,27 +110,27 @@ const RoleManagement = () => {
                   <td colSpan="4" className="text-center py-10 text-red-500">Error fetching data.</td>
                 </tr>
               )}
-              {!isLoading && !isError && filteredData?.map((role) => (
-                <tr key={role.id} className="hover:bg-gray-50 text-sm text-gray-700">
-                  <td className="px-4 py-3 font-medium text-gray-900 capitalize">{role.name}</td>
+              {!isLoading && !isError && filteredData?.map((team) => (
+                <tr key={team.id} className="hover:bg-gray-50 text-sm text-gray-700">
+                  <td className="px-4 py-3 font-medium text-gray-900 capitalize">{team.name}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center">
                       <Users className="w-4 h-4 mr-2 text-gray-500" />
-                      {role.user_count}
+                      {team.user_count}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1 max-w-md">
-                      {role.access.map(right => (
+                      {team.access.map(right => (
                         <span key={right} className="px-2 py-0.5 text-xs bg-gray-200 text-gray-800 rounded-full">{right}</span>
                       ))}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button onClick={() => handleOpenEditModal(role)} className="text-blue-600 hover:text-blue-800 mr-4" title="Edit">
+                    <button onClick={() => handleOpenEditModal(team)} className="text-blue-600 hover:text-blue-800 mr-4" title="Edit">
                       <Edit className="w-5 h-5" />
                     </button>
-                    <button onClick={() => handleDeleteClick(role)} className="text-red-600 hover:text-red-800" title="Delete">
+                    <button onClick={() => handleDeleteClick(team)} className="text-red-600 hover:text-red-800" title="Delete">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </td>
@@ -141,10 +141,10 @@ const RoleManagement = () => {
         </div>
       </div>
       
-      <RoleManagementModal
+      <TeamManagementModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        role={selectedRole}
+        team={selectedTeam}
         onSuccess={handleSuccess}
       />
       <ConfirmationModal
@@ -157,4 +157,4 @@ const RoleManagement = () => {
   );
 };
 
-export default RoleManagement;
+export default TeamManagement;

@@ -1,30 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
-import useGetRoles from '../hooks/useGetRoles';
+import useGetTeams from '../hooks/useGetTeams';
 import { Loader2 } from 'lucide-react';
 
 const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     email: '',
-    id_role: '',
+    id_team: '',
     account_type: 'credential',
   });
   const [error, setError] = useState('');
 
-  const { data: roles, isLoading: rolesLoading } = useGetRoles(token);
+  const { data: teams, isLoading: teamsLoading } = useGetTeams(token);
   const isEditMode = !!user;
 
   useEffect(() => {
     if (isEditMode) {
       setFormData({
         email: user.email || '',
-        id_role: user.id_role || '',
+        id_team: user.id_team || '',
         account_type: user.account_type || 'credential',
       });
     } else {
-      setFormData({ email: '', id_role: '', account_type: 'credential' });
+      setFormData({ email: '', id_team: '', account_type: 'credential' });
     }
     setError('');
   }, [isOpen, user]);
@@ -51,7 +51,7 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.email || !formData.id_role || !formData.account_type) {
+    if (!formData.email || !formData.id_team || !formData.account_type) {
       setError('All fields are required.');
       return;
     }
@@ -80,20 +80,20 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
-            {rolesLoading ? (
-              <p>Loading roles...</p>
+            <label htmlFor="team" className="block text-sm font-medium text-gray-700">Team</label>
+            {teamsLoading ? (
+              <p>Loading teams...</p>
             ) : (
               <select
-                id="role"
-                value={formData.id_role}
-                onChange={(e) => setFormData({ ...formData, id_role: e.target.value })}
+                id="team"
+                value={formData.id_team}
+                onChange={(e) => setFormData({ ...formData, id_team: e.target.value })}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 required
               >
-                <option value="" disabled>Select a role</option>
-                {roles?.map(role => (
-                  <option key={role.id} value={role.id}>{role.name}</option>
+                <option value="" disabled>Select a team</option>
+                {teams?.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
                 ))}
               </select>
             )}

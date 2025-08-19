@@ -249,6 +249,7 @@ export default function UploadPage() {
                 {/* Lebar 16.67% */}
                 <th className="px-6 py-4 w-4/12">Document Name</th>{" "}
                 {/* Lebar 33.33% - Kolom terlebar */}
+                <th className="px-6 py-4 w-2/12">Document Type</th>
                 <th className="px-6 py-4 w-1/12">Staff</th>
                 <th className="px-6 py-4 w-1/12">Team</th>
                 <th className="px-6 py-4 w-1/12">Status</th>
@@ -288,6 +289,7 @@ export default function UploadPage() {
                     <td className="px-6 py-4 font-medium text-gray-900 break-words">
                       {doc.document_name}
                     </td>
+                    <td className="px-6 py-4">{doc.document_type}</td>
                     <td className="px-6 py-4">{doc.staff}</td>
                     <td className="px-6 py-4">{doc.team}</td>
                     <td className="px-6 py-4">

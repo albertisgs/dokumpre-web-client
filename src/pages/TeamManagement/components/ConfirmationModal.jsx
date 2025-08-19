@@ -10,7 +10,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
           <AlertTriangle className="w-8 h-8 text-red-500 mr-3" />
           <h2 className="text-xl font-bold">Confirm Deletion</h2>
         </div>
-        <p className="text-gray-600 mb-6">Are you sure you want to delete this role? This action cannot be undone.</p>
+        <p className="text-gray-600 mb-6">Are you sure you want to delete this team? This action cannot be undone.</p>
         <div className="flex justify-end space-x-4">
           <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
           <button
