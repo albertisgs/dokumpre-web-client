@@ -8,7 +8,8 @@ import { Loader2 } from "lucide-react";
 import { menu } from "./configs/menu";
 import Pusher from "pusher-js";
 import toast, { Toaster } from "react-hot-toast";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider} from "./context/AuthContext";
+import { useAuth } from "./context/hooks/UseAuth";
 
 
 // Komponen ini menangani routing dinamis berdasarkan hak akses pengguna.

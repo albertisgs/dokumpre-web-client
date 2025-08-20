@@ -5,7 +5,7 @@ import axiosInstance from '../../../axios/axiosInstance';
 
 // Daftar hak akses yang valid, harus sama dengan yang ada di backend
 const VALID_ACCESS_RIGHTS = [
-    "dashboard","knowledge-base","market-competitor-insight","prompt-management","upload-document","sipp-case-details","user-management","team-management"
+    "dashboard","knowledge-base","market-competitor-insight","prompt-management","upload-document","sipp-case-details","user-management","team-management","role-management"
 ];
 
 const TeamManagementModal = ({ isOpen, onClose, team, onSuccess }) => {

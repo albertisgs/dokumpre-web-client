@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { LogOut } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+
 import { MicrosoftLogout } from "../pages/Login/handler/logoutMicrosoft";
 import { menu } from "../configs/menu";
 import { handleLogoutSession } from "../pages/Login/handler/logoutHandler";
+import { useAuth } from "../context/hooks/UseAuth";
 
 const Header = () => {
   const location = useLocation();

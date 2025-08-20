@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useAuth } from "../../context/AuthContext";
+
 import useGetData from "./hooks/useGetData";
 import { SuccessPopOut } from "../../components/SuccessPopOut";
 import { Loader2, Search, Trash2, Edit, Plus, AlertTriangle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axiosInstance";
 import UserManagementModal from "./hooks/UserManagementModal";
+import { useAuth } from "../../context/hooks/UseAuth";
 
 
 // A simple, self-contained confirmation modal for the delete action

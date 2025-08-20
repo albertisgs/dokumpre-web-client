@@ -1,42 +1,14 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext,useState, ReactNode, useEffect, useCallback } from 'react';
 import axiosInstance from '../axios/axiosInstance';
 
-// Mendefinisikan tipe data untuk metode autentikasi
-type AuthType = 'credential' | 'google' | 'microsoft' | null;
 
-// Mendefinisikan struktur data untuk pengguna
-interface IUser {
-  email: string;
-  name?: string;
-  picture?: string;
-  team?: string;
-  access_list?: string[];
-  id_team?: string;
-}
+const AuthContext = createContext(undefined);
 
-// Mendefinisikan struktur state autentikasi
-type AuthState = {
-  user: IUser | null;
-  authType: AuthType;
-};
+const SUPERADMIN_TEAM_ID = import.meta.env.VITE_SUPERADMIN_ID;
 
-// Mendefinisikan tipe untuk context
-type AuthContextType = {
-  authState: AuthState;
-  updateAuth: (user: IUser, authType: AuthType) => void;
-  logout: () => void;
-  verifySession: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-type AuthProviderProps = {
-  children: ReactNode;
-};
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>(() => {
-    const authType = localStorage.getItem('authType') as AuthType || null;
+export const AuthProvider = ({ children }) => {
+  const [authState, setAuthState] = useState(() => {
+    const authType = localStorage.getItem('authType')|| null;
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
     
@@ -53,16 +25,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   }, []);
 
+   const isSuperAdmin = useCallback((user) => {
+    return user?.id_team === SUPERADMIN_TEAM_ID;
+  }, []);
+
   // Fungsi updateAuth dibuat stabil dengan useCallback
-  const updateAuth = useCallback((user: IUser, authType: AuthType) => {
+  const updateAuth = useCallback((user, authType) => {
     localStorage.setItem('authType', authType || '');
     localStorage.setItem('user', JSON.stringify(user));
+    isSuperAdmin(user)
     setAuthState({ user, authType });
-  }, []);
+  }, [isSuperAdmin]);
 
   // Fungsi verifySession dibuat stabil dengan useCallback
   const verifySession = useCallback(async () => {
-    const storedAuthType = localStorage.getItem('authType') as AuthType;
+    const storedAuthType = localStorage.getItem('authType');
     if (!storedAuthType) {
       return; // Tidak ada sesi untuk diverifikasi
     }
@@ -73,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (profile.data) {
           // 3. Gabungkan data untuk membuat objek pengguna yang lengkap
-        const freshUser: IUser = {
+        const freshUser = {
           email: profile.data.email,
           name: profile.data.username,
           picture: profile.data.photo_url,
@@ -84,6 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // 4. Perbarui state dan localStorage
         updateAuth(freshUser, storedAuthType);
+        
         
       } else {
         throw new Error("Data profil tidak lengkap, sesi tidak valid.");
@@ -101,17 +79,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     verifySession();
   }, [verifySession]);
 
+  
+
   return (
-    <AuthContext.Provider value={{ authState, updateAuth, logout, verifySession }}>
+    <AuthContext.Provider value={{ authState, updateAuth, logout, verifySession, isSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export{ AuthContext } 

@@ -1,8 +1,8 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { useEffect } from "react";
 // import { handleLogoutSession } from "../../pages/Login/handler/logoutHandler";
 import { menu } from "../../configs/menu";
+import { useAuth } from "../../context/hooks/UseAuth";
 
 
 const GlobalAccessGuard = ({ children }) => {

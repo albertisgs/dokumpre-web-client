@@ -3,8 +3,9 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { menu } from "../configs/menu";
+import { useAuth } from "../context/hooks/UseAuth";
 
-import { useAuth } from "../context/AuthContext";
+
 
 const Sidebar = () => {
   const [currentPath, setCurrentPath] = useState("");

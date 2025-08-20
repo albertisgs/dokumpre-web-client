@@ -8,6 +8,7 @@ const UploadPage = lazy(()=>import('../pages/UploadDocument/uploadpage'))
 const SippPage = lazy(()=>import('../pages/SippCaseDetails/sippcasepage'))
 const UserManagement = lazy(()=>import('../pages/UserManagament/usermanagement'))
 const TeamManagementPage = lazy(()=>import('../pages/TeamManagement/TeamManagement'))
+const RoleManagementPage = lazy(()=>import('../pages/RoleManagement/RoleManagement'))
 export const menu = [
   {
     title: 'Dashboard',
@@ -67,8 +68,16 @@ export const menu = [
     title: 'Team Management',
     path: '/team-management',
     identifier: 'team-management',
-    icon: '/shield.svg', // Ganti dengan ikon yang sesuai
+    icon: '/group.svg', // Ganti dengan ikon yang sesuai
     component: TeamManagementPage,
+    teams: ['superadmin'],
+  },
+   {
+    title: 'Role Management',
+    path: '/role-management',
+    identifier: 'role-management',
+    icon: '/shield.svg', // Ganti dengan ikon yang sesuai
+    component: RoleManagementPage,
     teams: ['superadmin'],
   },
 

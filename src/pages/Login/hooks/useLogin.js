@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
+
 import { handleCredentialLogin, handleGoogleBELogin, handleMicrosoftLogin } from "../handler/loginHandler";
+import { useAuth } from "../../../context/hooks/UseAuth";
 
 
 export const useLogin = () => {

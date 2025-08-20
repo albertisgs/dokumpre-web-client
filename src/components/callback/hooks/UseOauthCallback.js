@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext';
 import axiosInstance from '../../../axios/axiosInstance';
+import { useAuth } from '../../../context/hooks/UseAuth';
 
 export const useOAuthCallback = (provider,status) => {
   const navigate = useNavigate();
@@ -41,5 +41,5 @@ export const useOAuthCallback = (provider,status) => {
     };
 
     verifyUser();
-  }, [provider, status, updateAuth, navigate]);
+  }, [provider, status, updateAuth, navigate, logout]);
 };

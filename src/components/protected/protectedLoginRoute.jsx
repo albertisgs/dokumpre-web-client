@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useAuth } from "../../context/AuthContext";
+
 import { MicrosoftLogout } from "../../pages/Login/handler/logoutMicrosoft";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/hooks/UseAuth";
 
 
 const ProtectedLoginRoute = ({ children }) => {

@@ -27,7 +27,7 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
       setFormData({ email: '', id_team: '', account_type: 'credential' });
     }
     setError('');
-  }, [isOpen, user]);
+  }, [isOpen, user, isEditMode]);
 
   const mutation = useMutation({
     mutationFn: (userData) => {
