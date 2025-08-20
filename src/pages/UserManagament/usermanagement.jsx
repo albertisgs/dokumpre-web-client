@@ -2,12 +2,18 @@ import { useState } from "react";
 
 import useGetData from "./hooks/useGetData";
 import { SuccessPopOut } from "../../components/SuccessPopOut";
-import { Loader2, Search, Trash2, Edit, Plus, AlertTriangle } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  Trash2,
+  Edit,
+  Plus,
+  AlertTriangle,
+} from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../axios/axiosInstance";
 import UserManagementModal from "./hooks/UserManagementModal";
-import { useAuth } from "../../context/hooks/UseAuth";
-
+import { useAuth } from "../../context/hooks/useAuth";
 
 // A simple, self-contained confirmation modal for the delete action
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
@@ -20,9 +26,15 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
           <AlertTriangle className="w-8 h-8 text-red-500 mr-3" />
           <h2 className="text-xl font-bold">Confirm Deletion</h2>
         </div>
-        <p className="text-gray-600 mb-6">Are you sure you want to delete this user? This action cannot be undone.</p>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete this user? This action cannot be
+          undone.
+        </p>
         <div className="flex justify-end space-x-4">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+          >
             Cancel
           </button>
           <button
@@ -39,10 +51,10 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
   );
 };
 
-
 const UserManagement = () => {
   const { authState } = useAuth();
-  const token = authState.authType === 'credential' ? authState.token : authState.id_token;
+  const token =
+    authState.authType === "credential" ? authState.token : authState.id_token;
   const queryClient = useQueryClient();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,11 +68,13 @@ const UserManagement = () => {
   // Mutation for handling the DELETE API call
   const deleteMutation = useMutation({
     mutationFn: (userId) => {
-      return axiosInstance.generalSession.delete(`/api/user-management/${userId}`);
+      return axiosInstance.generalSession.delete(
+        `/api/user-management/${userId}`
+      );
     },
     onSuccess: () => {
       SuccessPopOut("Success", "success", "User deleted successfully.");
-      queryClient.invalidateQueries(['syncUserMngmtData', token]); // Refetch data on success
+      queryClient.invalidateQueries(["syncUserMngmtData", token]); // Refetch data on success
     },
     onError: () => {
       SuccessPopOut("Error", "error", "Failed to delete user.");
@@ -79,6 +93,7 @@ const UserManagement = () => {
       item.account_type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  console.log(users)
   const handleOpenCreateModal = () => {
     setSelectedUser(null);
     setIsModalOpen(true);
@@ -104,7 +119,7 @@ const UserManagement = () => {
 
   const handleSuccess = (message) => {
     SuccessPopOut("Success", "success", message);
-  }
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -136,74 +151,112 @@ const UserManagement = () => {
           <table className="min-w-full">
             <thead className="bg-gray-100">
               <tr className="text-left text-sm font-semibold text-gray-600">
-                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Email</th>
-                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Team</th>
-                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">Type</th>
-                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10 text-center">Actions</th>
+                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">
+                  Email
+                </th>
+                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">
+                  Team
+                </th>
+                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">
+                  Role
+                </th>
+                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10">
+                  Type
+                </th>
+                <th className="px-4 py-3 sticky top-0 bg-gray-100 z-10 text-center">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading && (
                 <tr>
-                  <td colSpan="4" className="px-6 py-10 text-center text-gray-400">
+                  <td
+                    colSpan="4"
+                    className="px-6 py-10 text-center text-gray-400"
+                  >
                     <Loader2 className="w-8 h-8 animate-spin mx-auto" />
                   </td>
                 </tr>
               )}
               {isError && (
                 <tr>
-                  <td colSpan="4" className="px-6 py-4 text-center text-red-500">
+                  <td
+                    colSpan="4"
+                    className="px-6 py-4 text-center text-red-500"
+                  >
                     Error fetching data. Please try again.
                   </td>
                 </tr>
               )}
-              {!isLoading && !isError && filteredData?.length > 0 ? (
-                filteredData.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 text-sm text-gray-700">
-                    <td className="px-4 py-3 font-medium text-gray-900">{user.email}</td>
-                    <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            user.team_name === 'superadmin' ? 'bg-red-100 text-red-800' :
-                            user.team_name === 'finance' ? 'bg-green-100 text-green-800' :
-                            user.team_name === 'legal' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                        }`}>
-                            {user.team_name}
+              {!isLoading && !isError && filteredData?.length > 0
+                ? filteredData.map((user) => (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-gray-50 text-sm text-gray-700"
+                    >
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.team_name === "superadmin"
+                              ? "bg-red-100 text-red-800"
+                              : user.team_name === "finance"
+                              ? "bg-green-100 text-green-800"
+                              : user.team_name === "legal"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {user.team_name}
                         </span>
-                    </td>
-                    <td className="px-4 py-3 capitalize">{user.account_type}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleOpenEditModal(user)}
-                        className="text-blue-600 hover:text-blue-800 mr-4"
-                        title="Edit"
+                      </td>
+                      <td className="px-4 py-3 capitalize text-gray-600">
+                        {user.role_name || (
+                          <span className="text-gray-400">No Role</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 capitalize">
+                        {user.account_type}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleOpenEditModal(user)}
+                          className="text-blue-600 hover:text-blue-800 mr-4"
+                          title="Edit"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(user)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                : !isLoading &&
+                  !isError && (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="px-6 py-10 text-center text-gray-400"
                       >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(user)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                !isLoading && !isError && (
-                  <tr>
-                    <td colSpan="4" className="px-6 py-10 text-center text-gray-400">
-                      {searchTerm ? "No results found." : "No users available."}
-                    </td>
-                  </tr>
-                )
-              )}
+                        {searchTerm
+                          ? "No results found."
+                          : "No users available."}
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
         </div>
       </div>
-      
+
       {/* The Modal for Creating/Editing Users from the Canvas */}
       <UserManagementModal
         isOpen={isModalOpen}

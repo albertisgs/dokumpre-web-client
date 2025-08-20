@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "../../../context/hooks/useAuth";
 import useGetTeams from "../../UserManagament/hooks/useGetTeams";
-import useGetPermissions from "../components/hooks/useGetPermissions";
+import useGetFilteredPermissions from "../components/hooks/useGetFilteredPermission";
 import axiosInstance from "../../../axios/axiosInstance";
 
 const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
@@ -23,8 +23,9 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   // --- STATE BARU UNTUK TAB ---
   const [activeTab, setActiveTab] = useState("crud"); // 'crud' or 'special'
 
-  const { data: allPermissions, isLoading: permissionsLoading } =
-    useGetPermissions();
+  // `formData.id_team` akan menjadi pemicu untuk hook ini
+  const { data: availablePermissions, isLoading: permissionsLoading } =
+    useGetFilteredPermissions(formData.id_team);
   const { data: allTeams, isLoading: teamsLoading } = useGetTeams();
 
   useEffect(() => {
@@ -46,38 +47,43 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
         setSelectedPermissions(new Set());
       }
       setError("");
-      setActiveTab("crud"); // Reset tab to default when modal opens
+      setActiveTab("crud");
     }
   }, [isOpen, role, isEditMode, currentUserIsSuperAdmin, authState.user]);
 
   const mutation = useMutation({
-     mutationFn: (payload) => {
-            if (isEditMode) {
-                // Logika EDIT tetap sama
-                return axiosInstance.generalSession.put(`/api/roles-management/${role.id}`, {
-                    name: payload.name,
-                    description: payload.description,
-                    permission_ids: Array.from(payload.permissions),
-                });
-            } else {
-                // LOGIKA CREATE YANG BARU: Kirim semua data sekaligus
-                return axiosInstance.generalSession.post('/api/roles-management/', {
-                    name: payload.name,
-                    description: payload.description,
-                    id_team: payload.id_team,
-                    permission_ids: Array.from(payload.permissions),
-                });
-            }
-        },
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['rolesData'] });
-          onSuccess(isEditMode ? 'Role updated successfully!' : 'Role created successfully!');
-          onClose();
-        },
-        onError: (err) => {
-          setError(err.response?.data?.detail || 'An unexpected error occurred.');
-        },
-    });
+    mutationFn: (payload) => {
+      if (isEditMode) {
+        // Logika EDIT tetap sama
+        return axiosInstance.generalSession.put(
+          `/api/roles-management/${role.id}`,
+          {
+            name: payload.name,
+            description: payload.description,
+            permission_ids: Array.from(payload.permissions),
+          }
+        );
+      } else {
+        // LOGIKA CREATE YANG BARU: Kirim semua data sekaligus
+        return axiosInstance.generalSession.post("/api/roles-management/", {
+          name: payload.name,
+          description: payload.description,
+          id_team: payload.id_team,
+          permission_ids: Array.from(payload.permissions),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rolesData"] });
+      onSuccess(
+        isEditMode ? "Role updated successfully!" : "Role created successfully!"
+      );
+      onClose();
+    },
+    onError: (err) => {
+      setError(err.response?.data?.detail || "An unexpected error occurred.");
+    },
+  });
 
   const handleCheckboxChange = (permissionId) => {
     setSelectedPermissions((prev) => {
@@ -100,12 +106,12 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   };
 
   // --- LOGIKA BARU UNTUK MEMFILTER PERMISSIONS ---
-  const crudPermissions = allPermissions?.filter((p) =>
+  const crudPermissions = availablePermissions?.filter((p) =>
     ["create", "read", "update", "delete"].some((keyword) =>
       p.name.includes(keyword)
     )
   );
-  const specialPermissions = allPermissions?.filter((p) =>
+  const specialPermissions = availablePermissions?.filter((p) =>
     ["manager", "master"].some((keyword) => p.name.includes(keyword))
   );
 
@@ -224,6 +230,9 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
 
             {/* Tab Content */}
             <div className="mt-2 border p-3 rounded-b-md max-h-48 overflow-y-auto">
+               {!formData.id_team && (
+                <p className="text-center text-gray-500">Please select a team to see available permissions.</p>
+              )}
               {permissionsLoading ? (
                 <p>Loading permissions...</p>
               ) : (
