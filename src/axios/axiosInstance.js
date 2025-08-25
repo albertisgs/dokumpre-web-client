@@ -33,7 +33,7 @@ const AxiosInstanceSession = (baseURL) => {
         localStorage.removeItem('authType');
         localStorage.removeItem('user');
         
-        window.location.href = '/login';
+        // window.location.href = '/login';
       }
       
       // Kembalikan error agar bisa ditangani lebih lanjut jika perlu

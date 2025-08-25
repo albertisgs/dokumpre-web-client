@@ -1,5 +1,6 @@
 
 import { useLogin } from "./hooks/useLogin";
+import { Loader2 } from "lucide-react"; 
 const Login = () => {
   const {
     email,
@@ -8,7 +9,8 @@ const Login = () => {
     setPassword,
     handleGoogleBESubmit,
     handleSubmit,
-    handleMicrosoftSubmit
+    handleMicrosoftSubmit,
+    loading
   } = useLogin();
   
   return (
@@ -95,9 +97,17 @@ const Login = () => {
             <button
               type="submit"
               onClick={handleSubmit}
+              disabled={loading} 
               className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
             >
-              Sign In
+              {loading ? ( // 4. Tampilkan spinner jika loading, atau teks jika tidak
+                <>
+                  <Loader2 className="animate-spin h-5 w-5 mr-3" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </button>
           </form>
 

@@ -6,7 +6,13 @@ import { Loader2 } from "lucide-react";
 import useGetRolesByTeam from "./useGetRolesByTeam";
 import { useAuth } from "../../../context/hooks/useAuth";
 
-const UserManagementModal = ({ isOpen, onClose, user, onSuccess, isSuperAdmin }) => {
+const UserManagementModal = ({
+  isOpen,
+  onClose,
+  user,
+  onSuccess,
+  isSuperAdmin,
+}) => {
   const { authState } = useAuth();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -45,15 +51,15 @@ const UserManagementModal = ({ isOpen, onClose, user, onSuccess, isSuperAdmin })
     }
   }, [isOpen, user, isEditMode, isSuperAdmin, authState.user]);
 
-
-   useEffect(() => {
-    if (isOpen) {
-      setFormData(currentFormData => ({
-        ...currentFormData,
-        id_role: "" 
-      }));
-    }
-  }, [formData.id_team, isOpen]);
+  // TAMBAHKAN FUNGSI BARU INI:
+  const handleTeamChange = (e) => {
+    const newTeamId = e.target.value;
+    setFormData({
+      ...formData,
+      id_team: newTeamId,
+      id_role: "", // Secara eksplisit reset role di sini
+    });
+  };
 
   const mutation = useMutation({
     mutationFn: (userData) => {
@@ -119,27 +125,34 @@ const UserManagementModal = ({ isOpen, onClose, user, onSuccess, isSuperAdmin })
               }
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
-              disabled={isEditMode}
+              disabled={isEditMode && !isSuperAdmin}
             />
           </div>
 
           {isSuperAdmin && (
             <div className="mb-4">
-              <label htmlFor="team" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="team"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Team
               </label>
               {teamsLoading ? (
                 <p>Loading teams...</p>
               ) : (
+                // CARI elemen <select> untuk tim dan UBAH `onChange`-nya
+
                 <select
                   id="team"
                   value={formData.id_team}
-                  onChange={(e) => setFormData({ ...formData, id_team: e.target.value })}
+                  onChange={handleTeamChange} // Ganti dengan handler baru
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
                   required
-                  disabled={isEditMode} // Tetap disable saat edit
+                  disabled={isEditMode && !isSuperAdmin} // Ini juga sudah menerapkan saran saya sebelumnya
                 >
-                  <option value="" disabled>Select a team</option>
+                  <option value="" disabled>
+                    Select a team
+                  </option>
                   {teams?.map((team) => (
                     <option key={team.id} value={team.id}>
                       {team.name}
@@ -165,7 +178,7 @@ const UserManagementModal = ({ isOpen, onClose, user, onSuccess, isSuperAdmin })
               }
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
-              disabled={isEditMode}
+              disabled={isEditMode && !isSuperAdmin}
             >
               <option value="credential">Credential</option>
               <option value="google">Google</option>

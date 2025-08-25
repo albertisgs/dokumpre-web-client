@@ -8,12 +8,20 @@ import { useAuth } from "../../../context/hooks/UseAuth";
 export const useLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false); 
   const navigate = useNavigate();
   const { updateAuth } = useAuth();
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
-    await handleCredentialLogin(email, password, updateAuth, navigate);
+    setLoading(true); // 2. Atur loading menjadi true saat proses dimulai
+    try {
+      await handleCredentialLogin(email, password, updateAuth, navigate);
+    } catch (error) {
+      console.error("error login user", error)
+    } finally {
+      setLoading(false); // 3. Atur loading kembali ke false setelah selesai (baik berhasil maupun gagal)
+    }
   };
 
   const handleMicrosoftSubmit = async (e) => {
@@ -33,6 +41,7 @@ export const useLogin = () => {
     setPassword,
     handleSubmit,
     handleMicrosoftSubmit,
-    handleGoogleBESubmit
+    handleGoogleBESubmit,
+    loading
   };
 };

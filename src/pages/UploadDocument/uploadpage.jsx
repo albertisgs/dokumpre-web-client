@@ -5,7 +5,14 @@ import {
   useDeleteDocument,
   useDeleteMultipleDocuments,
 } from "./hooks/useLegalDocuments";
-import { Loader2, Trash2, UploadCloud, FileText, X, FileImage } from "lucide-react";
+import {
+  Loader2,
+  Trash2,
+  UploadCloud,
+  FileText,
+  X,
+  FileImage,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 // Ganti nama komponen menjadi PascalCase
@@ -14,6 +21,7 @@ export default function UploadPage() {
   const [filesToUpload, setFilesToUpload] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Hooks dari React Query untuk interaksi API
   const {
@@ -21,7 +29,8 @@ export default function UploadPage() {
     isLoading: isLoadingDocs,
     isError,
   } = useGetLegalDocuments();
-  const { mutate: uploadFile, isPending: isUploading } = useUploadDocument();
+  const { mutate: uploadFile, isPending: isUploading } =
+    useUploadDocument(setUploadProgress);
   const { mutate: deleteFile } = useDeleteDocument();
   const { mutate: deleteMultiple, isPending: isDeletingMultiple } =
     useDeleteMultipleDocuments();
@@ -29,15 +38,19 @@ export default function UploadPage() {
   // --- Event Handlers ---
   const handleFileSelect = (selectedFiles) => {
     const allowedTypes = [
-        'application/pdf',
-        'application/msword', // untuk .doc
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // untuk .docx
-        'image/jpeg', // untuk .jpg dan .jpeg
-        'image/png'   // untuk .png
+      "application/pdf",
+      "application/msword", // untuk .doc
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // untuk .docx
+      "image/jpeg", // untuk .jpg dan .jpeg
+      "image/png", // untuk .png
     ];
-     const newFiles = Array.from(selectedFiles).filter(file => allowedTypes.includes(file.type));
+    const newFiles = Array.from(selectedFiles).filter((file) =>
+      allowedTypes.includes(file.type)
+    );
     if (newFiles.length !== selectedFiles.length) {
-      toast.error("Beberapa file tidak didukung. Hanya Word, PDF, JPG, & PNG yang diizinkan.");
+      toast.error(
+        "Beberapa file tidak didukung. Hanya Word, PDF, JPG, & PNG yang diizinkan."
+      );
     }
     setFilesToUpload((prev) => [...prev, ...newFiles]);
   };
@@ -113,12 +126,16 @@ export default function UploadPage() {
   };
 
   const getFileIcon = (fileName) => {
-    if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) {
-        return <FileImage className="w-5 h-5 text-purple-500"/>;
+    if (
+      fileName.endsWith(".jpg") ||
+      fileName.endsWith(".jpeg") ||
+      fileName.endsWith(".png")
+    ) {
+      return <FileImage className="w-5 h-5 text-purple-500" />;
     }
     // Asumsikan sisanya adalah dokumen
-    return <FileText className="w-5 h-5 text-red-500"/>;
-}
+    return <FileText className="w-5 h-5 text-red-500" />;
+  };
 
   return (
     <>
@@ -181,6 +198,20 @@ export default function UploadPage() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {isUploading && (
+          <div className="mt-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-center mt-1 text-gray-600">
+              {uploadProgress}%
+            </p>
           </div>
         )}
 

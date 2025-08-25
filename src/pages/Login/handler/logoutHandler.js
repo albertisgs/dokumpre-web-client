@@ -1,18 +1,9 @@
 import axiosInstance from "../../../axios/axiosInstance";
 
-export const handleGoogleBELogout = async (token) => {
+export const handleGoogleBELogout = async () => {
     try {
       // The signature is axios.post(url, data, config)
-      const response = await axiosInstance.general.post(
-        'api/authgoogle/logout',
-        null,
-        {   
-          headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-        }
-      )
+       const response = await axiosInstance.generalSession.get("/api/authgoogle/logout");
       return response.data
     } catch (error) {
       console.error('Failed to logout:', error);

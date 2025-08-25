@@ -18,7 +18,7 @@ export const useGetLegalDocuments = () => {
 
 
 // --- 2. Upload dokumen baru ---
-const uploadDocument = async (file) => {
+const uploadDocument = async ({ file, onUploadProgress }) => {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -29,22 +29,33 @@ const uploadDocument = async (file) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      onUploadProgress: onUploadProgress
     }
   );
   return response.data;
 };
 
-export const useUploadDocument = () => {
+export const useUploadDocument = (setUploadProgress) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: uploadDocument,
+    mutationFn: (file) => {
+      // Buat fungsi callback untuk dioper ke axios
+      const onUploadProgress = (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress(percentCompleted); // Perbarui state progres di komponen
+      };
+      return uploadDocument({ file, onUploadProgress });
+    },
     onSuccess: (data) => {
       toast.success(`Dokumen "${data.document.document_name}" berhasil diunggah!`);
-      // Refresh data di tabel setelah sukses
       queryClient.invalidateQueries({ queryKey: ['legalDocuments'] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Gagal mengunggah dokumen.');
+    },
+    onSettled: () => {
+      // Reset progres menjadi 0 setelah selesai (baik sukses maupun gagal)
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   });
 };

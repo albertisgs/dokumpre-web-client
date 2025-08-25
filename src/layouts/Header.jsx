@@ -45,13 +45,13 @@ const Header = () => {
 
       logout();
 
-      navigate("/login");
+      // navigate("/login");
     } else if (authState.authType === "credential") {
       await handleLogoutSession();
 
       logout();
 
-      navigate("/login");
+      // navigate("/login");
     }
   };
 

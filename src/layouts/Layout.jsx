@@ -1,6 +1,6 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation} from "react-router-dom";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Sidebar from "./Sidebar";
 
@@ -17,20 +17,6 @@ import GlobalAccessGuard from "../components/protected/GlobalAccessGuard";
 
 const Layout = () => {
   const location = useLocation();
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const auth = localStorage.getItem("authType");
-
-    if (auth && location.pathname === "/login") {
-      navigate("/");
-    }
-
-    if (!auth && location.pathname !== "/login") {
-      navigate("/login");
-    }
-  }, [location.pathname, navigate]);
 
   const noSidebarRoutes = ["/login"];
 

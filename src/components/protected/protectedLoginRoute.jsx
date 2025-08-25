@@ -1,35 +1,23 @@
-import { useEffect, useRef } from "react";
-
-import { MicrosoftLogout } from "../../pages/Login/handler/logoutMicrosoft";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/hooks/useAuth";
 
-
-
 const ProtectedLoginRoute = ({ children }) => {
-  const { handleMicrosoftLogout } = MicrosoftLogout();
-  const { authState, logout } = useAuth();
-  const hasLoggedOut = useRef(false); // prevent infinite logout loop
-  const navigate = useNavigate()
+  const { authState } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
-    if (!authState.authType && !hasLoggedOut.current) {
-      logout();
-      hasLoggedOut.current = true;
-    } else if (authState.authType === "credential" && !hasLoggedOut.current) {
-      logout();
-      hasLoggedOut.current = true;
-    } else if (authState.authType === "microsoft" && !hasLoggedOut.current) {
-      handleMicrosoftLogout();
-      hasLoggedOut.current = true;
+    // Efek ini akan berjalan setelah komponen di-mount.
+    // Jika pengguna sudah login saat mereka mencoba membuka halaman /login,
+    // maka kita arahkan mereka ke halaman utama.
+    if (authState.authType) {
+      navigate('/', { replace: true });
     }
-  }, [authState.authType, logout, handleMicrosoftLogout]);
+  }, [authState.authType, navigate]);
 
-  // If user already has authType, go home
-  if (authState.authType) {
-    return navigate('/', { replace: true }); ;
-  }
-
-  return children;
+  // Jika belum terautentikasi, tampilkan halaman login.
+  // Jika sudah terautentikasi, jangan tampilkan apa-apa (karena useEffect akan mengalihkan).
+  return authState.authType ? null : children;
 };
 
 export default ProtectedLoginRoute;

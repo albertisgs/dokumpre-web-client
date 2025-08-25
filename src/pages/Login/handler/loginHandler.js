@@ -8,45 +8,48 @@ export const handleCredentialLogin = async (
   navigate
 ) => {
   try {
-    const login = await axiosInstance.generalSession.post("api/auth/sign-in", {
+    const loginResponse = await axiosInstance.generalSession.post("api/auth/sign-in", {
       email,
       password,
     });
-    if (login.status == 200) {
-      const profile = await axiosInstance.generalSession.get("api/auth/me");
-      const team = await axiosInstance.generalSession.get(
-        `api/user-management/teams/${profile.data?.id_team}`
-      );
 
-      if (profile.data) {
-        updateAuth(
-          {
-            email: profile.data.email,
-            name: profile.data.username,
-            picture: null,
-            team: team.data?.name,
-            access_list: profile.data.access_list,
-            id_team: profile.data.id_team,
-            permissions: profile.data.permissions || [],
-          },
-          "credential"
-        );
-        
-        navigate("/");
-      } else {
-        showAlert({
-          title: "Login Failed",
-          text: "Invalid email or password.",
-          icon: "error",
-        });
-      }
+    // DATA PROFIL SEKARANG ADA DI loginResponse.data
+    const profile = loginResponse.data;
+    console.log(profile.permission)
+    console.log(profile.access_list)
+
+    if (profile) {
+      // Kita tidak perlu lagi memanggil API team secara terpisah di sini
+      // karena team_name sudah ada di dalam profil
+      updateAuth(
+        {
+          email: profile.email,
+          name: profile.username,
+          picture: profile.photo_url || null,
+          team: profile.team_name, // <-- Gunakan team_name dari profil
+          access_list: profile.access_list,
+          id_team: profile.id_team,
+          permissions: profile.permissions || [],
+        },
+        "credential"
+      );
+      
+      navigate("/");
+    } else {
+      // Skenario ini seharusnya tidak terjadi jika backend bekerja dengan benar
+      showAlert({
+        title: "Login Failed",
+        text: "Could not retrieve user profile.",
+        icon: "error",
+      });
     }
   } catch (error) {
     showAlert({
       title: "Login Failed",
-      text: error.response?.data?.message || "An error occurred",
+      text: error.response?.data?.detail || "An error occurred",
       icon: "error",
     });
+    throw error; // Lemparkan error agar state loading bisa di-handle
   }
 };
 

@@ -17,8 +17,8 @@ export const AuthProvider = ({ children }) => {
 
   // Fungsi logout dibuat stabil dengan useCallback
   const logout = useCallback(() => {
-    localStorage.removeItem('authType');
-    localStorage.removeItem('user');
+    // localStorage.removeItem('authType');
+    // localStorage.removeItem('user');
     setAuthState({
       user: null,
       authType: null,
