@@ -4,8 +4,10 @@ import axiosInstance from "../../../axios/axiosInstance";
 import useGetTeams from "../hooks/useGetTeams";
 import { Loader2 } from "lucide-react";
 import useGetRolesByTeam from "./useGetRolesByTeam";
+import { useAuth } from "../../../context/hooks/useAuth";
 
-const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
+const UserManagementModal = ({ isOpen, onClose, user, onSuccess, isSuperAdmin }) => {
+  const { authState } = useAuth();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     email: "",
@@ -15,12 +17,13 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
   });
   const [error, setError] = useState("");
 
-  const { data: teams, isLoading: teamsLoading } = useGetTeams(token);
+  const { data: teams, isLoading: teamsLoading } = useGetTeams();
   const { data: roles, isLoading: rolesLoading } = useGetRolesByTeam(
     formData.id_team
   );
   const isEditMode = !!user;
 
+  // useEffect yang sudah ada untuk inisialisasi form
   useEffect(() => {
     if (isOpen) {
       if (isEditMode) {
@@ -28,19 +31,29 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
           email: user.email || "",
           id_team: user.id_team || "",
           account_type: user.account_type || "credential",
-          id_role: user.id_role || "", // Set role saat edit
+          id_role: user.id_role || "",
         });
       } else {
         setFormData({
           email: "",
-          id_team: "",
+          id_team: isSuperAdmin ? "" : authState.user?.id_team,
           account_type: "credential",
           id_role: "",
         });
       }
       setError("");
     }
-  }, [isOpen, user, isEditMode]);
+  }, [isOpen, user, isEditMode, isSuperAdmin, authState.user]);
+
+
+   useEffect(() => {
+    if (isOpen) {
+      setFormData(currentFormData => ({
+        ...currentFormData,
+        id_role: "" 
+      }));
+    }
+  }, [formData.id_team, isOpen]);
 
   const mutation = useMutation({
     mutationFn: (userData) => {
@@ -110,36 +123,32 @@ const UserManagementModal = ({ isOpen, onClose, user, token, onSuccess }) => {
             />
           </div>
 
-          <div className="mb-4">
-            <label
-              htmlFor="team"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Team
-            </label>
-            {teamsLoading ? (
-              <p>Loading teams...</p>
-            ) : (
-              <select
-                id="team"
-                value={formData.id_team}
-                onChange={(e) =>
-                  setFormData({ ...formData, id_team: e.target.value })
-                }
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value="" disabled>
-                  Select a team
-                </option>
-                {teams?.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {isSuperAdmin && (
+            <div className="mb-4">
+              <label htmlFor="team" className="block text-sm font-medium text-gray-700">
+                Team
+              </label>
+              {teamsLoading ? (
+                <p>Loading teams...</p>
+              ) : (
+                <select
+                  id="team"
+                  value={formData.id_team}
+                  onChange={(e) => setFormData({ ...formData, id_team: e.target.value })}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                  required
+                  disabled={isEditMode} // Tetap disable saat edit
+                >
+                  <option value="" disabled>Select a team</option>
+                  {teams?.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           <div className="mb-4">
             <label

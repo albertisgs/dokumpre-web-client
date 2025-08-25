@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }) => {
           access_list: profile.data.access_list,
           team: profile.data?.team_name,
           id_team: profile.data.id_team,
+          permissions: profile.data.permissions || [],
         };
         
         // 4. Perbarui state dan localStorage

@@ -3,30 +3,50 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { menu } from "../configs/menu";
-import { useAuth } from "../context/hooks/UseAuth";
-
-
+import { useAuth } from "../context/hooks/useAuth";
 
 const Sidebar = () => {
   const [currentPath, setCurrentPath] = useState("");
 
   const location = useLocation();
 
-  const { authState } = useAuth();
+  const { authState, isSuperAdmin } = useAuth();
 
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location.pathname]);
 
   const accessibleMenu = useMemo(() => {
+    const user = authState.user;
     // PERBAIKAN: Logika dipindahkan ke dalam useMemo
 
-    const userAccessList = authState.user?.access_list || [];
+    const userAccessList = user?.access_list || [];
+    const userPermissions = user?.permissions || [];
+    const userIsSuperAdmin = isSuperAdmin(user);
 
     // Filter menu berdasarkan hak akses dari backend
 
-    return menu.filter((item) => userAccessList.includes(item.identifier));
-  }, [authState.user]); // PERBAIKAN: Bergantung langsung pada objek user
+   return menu.filter((item) => {
+      // Jika user adalah Superadmin, tampilkan semua
+      if (userIsSuperAdmin) {
+        return true;
+      }
+      
+      // Logika baru untuk menu yang butuh permission khusus
+      if (item.identifier === "user-management") {
+        return userPermissions.includes("user-management:master");
+      }
+      if (item.identifier === "role-management") {
+        return userPermissions.includes("role-management:master");
+      }
+      if (item.identifier === "team-management") {
+        return false; // Hanya untuk superadmin, jadi filter di sini
+      }
+
+      // Logika lama untuk menu lainnya (berdasarkan akses modul)
+      return userAccessList.includes(item.identifier);
+    });
+  }, [authState.user, isSuperAdmin]); // PERBAIKAN: Bergantung langsung pada objek user
 
   const isActive = (path) => {
     return currentPath === path || currentPath.startsWith(path + "/");

@@ -4,12 +4,10 @@ import usePostData from "../hooks/usePostData";
 const NewPromptModal = ({ isOpen, onClose, onSuccess }) => {
   if (!isOpen) return null;
 
-  const { mutate } = usePostData(); 
+  const { mutate } = usePostData(); ; 
 
   const [formData, setFormData] = useState({
     usecase_name: '',
-    user_request: '',
-    team: '',
     priority: 'High',
     reason: '',
     prompt: '',
@@ -27,10 +25,8 @@ const NewPromptModal = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const payload = {
+   const payload = {
       usecase_name: formData.usecase_name,
-      user_request: formData.user_request,
-      team: formData.team,
       priority: formData.priority,
       reason: formData.reason,
       prompt: formData.prompt,
@@ -38,11 +34,12 @@ const NewPromptModal = ({ isOpen, onClose, onSuccess }) => {
 
     mutate(payload, {
       onSuccess: () => {
-        onSuccess();   // ini manggil SuccessPopOut dari parent
-        onClose();     // ini nutup modal
+        onSuccess();
+        onClose();
       },
     });    
   };
+
 
   return (
     <div className="modal-overlay">
@@ -64,28 +61,6 @@ const NewPromptModal = ({ isOpen, onClose, onSuccess }) => {
                 type="text"
                 value={formData.usecase_name}
                 onChange={handleChange('usecase_name')}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">User Request</label>
-              <input
-                type="text"
-                value={formData.user_request}
-                onChange={handleChange('user_request')}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
-              <input
-                type="text"
-                value={formData.team}
-                onChange={handleChange('team')}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />

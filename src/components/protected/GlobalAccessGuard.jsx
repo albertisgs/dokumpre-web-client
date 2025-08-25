@@ -1,35 +1,61 @@
+// src/components/protected/GlobalAccessGuard.jsx
+
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-// import { handleLogoutSession } from "../../pages/Login/handler/logoutHandler";
 import { menu } from "../../configs/menu";
-import { useAuth } from "../../context/hooks/UseAuth";
+import { useAuth } from "../../context/hooks/useAuth";
 
 
 const GlobalAccessGuard = ({ children }) => {
-  const { authState,logout } = useAuth();
+  const { authState, isSuperAdmin } = useAuth(); // Ambil isSuperAdmin
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userAccessList = authState.user?.access_list;
+    const user = authState.user;
+    // Hanya jalankan jika pengguna sudah login
+    if (!authState.authType || !user) {
+      return;
+    }
+    
+    // Superadmin selalu diizinkan
+    if (isSuperAdmin(user)) {
+      return;
+    }
 
-    // Hanya jalankan jika pengguna sudah login dan memiliki daftar hak akses
-    if (authState.authType && userAccessList) {
+    const userAccessList = user.access_list || [];
+    const userPermissions = user.permissions || [];
+    const currentMenuItem = menu.find(item => item.path === location.pathname);
 
-      // Cari item menu yang cocok dengan path URL saat ini
-      const currentMenuItem = menu.find(item => item.path === location.pathname);
-      // Jika halaman saat ini ada di menu, TAPI identifier-nya TIDAK ADA
-      // di dalam daftar hak akses pengguna, maka akses dicabut.
-      if (currentMenuItem && !userAccessList.includes(currentMenuItem.identifier)) {
-        // handleLogoutSession()
-        // logout();
-        // navigate('/login');
-        navigate('/404', { replace: true }); 
+    if (currentMenuItem) {
+      const { identifier } = currentMenuItem;
+      let hasAccess = false;
+
+      // Cek akses berdasarkan identifier
+      switch (identifier) {
+        case "user-management":
+          hasAccess = userPermissions.includes("user-management:master");
+          break;
+        case "role-management":
+          hasAccess = userPermissions.includes("role-management:master");
+          break;
+        case "team-management":
+          hasAccess = false; // Hanya untuk superadmin, akan selalu false di sini
+          break;
+        default:
+          // Untuk halaman lain, cek berdasarkan access_list
+          hasAccess = userAccessList.includes(identifier);
+          break;
+      }
+
+      if (!hasAccess) {
+        navigate('/404', { replace: true });
       }
     }
-  }, [authState.user, location.pathname, navigate, authState.authType, logout]); // Efek ini berjalan setiap kali data pengguna atau lokasi berubah
 
-  return children; // Tampilkan halaman jika akses valid
+  }, [authState, location.pathname, navigate, isSuperAdmin]);
+
+  return children;
 };
 
 export default GlobalAccessGuard;

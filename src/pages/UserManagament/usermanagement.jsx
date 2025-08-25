@@ -52,7 +52,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
 };
 
 const UserManagement = () => {
-  const { authState } = useAuth();
+  const { authState, isSuperAdmin } = useAuth();
+  const currentUserIsSuperAdmin = isSuperAdmin(authState.user);
   const token =
     authState.authType === "credential" ? authState.token : authState.id_token;
   const queryClient = useQueryClient();
@@ -264,6 +265,7 @@ const UserManagement = () => {
         user={selectedUser}
         token={token}
         onSuccess={handleSuccess}
+        isSuperAdmin={currentUserIsSuperAdmin}
       />
       {/* The Confirmation Modal for Deleting Users */}
       <ConfirmationModal

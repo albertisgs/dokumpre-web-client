@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../../axios/axiosInstance';
-import { useAuth } from '../../../context/hooks/UseAuth';
+import { useAuth } from '../../../context/hooks/useAuth';
+
 
 export const useOAuthCallback = (provider,status) => {
   const navigate = useNavigate();
@@ -25,7 +26,8 @@ export const useOAuthCallback = (provider,status) => {
               picture: profile.data.photo_url || null, // Handle jika picture tidak ada
               team: profile.data?.team_name,
               access_list: profile.data.access_list,
-              id_team: profile.data.id_team
+              id_team: profile.data.id_team,
+              permissions: profile.data.permissions || [],
             },
             provider
           );

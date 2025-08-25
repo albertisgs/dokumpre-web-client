@@ -70,7 +70,6 @@ export const menu = [
     identifier: 'team-management',
     icon: '/group.svg', // Ganti dengan ikon yang sesuai
     component: TeamManagementPage,
-    teams: ['superadmin'],
   },
    {
     title: 'Role Management',
@@ -78,7 +77,6 @@ export const menu = [
     identifier: 'role-management',
     icon: '/shield.svg', // Ganti dengan ikon yang sesuai
     component: RoleManagementPage,
-    teams: ['superadmin'],
   },
 
 ];
