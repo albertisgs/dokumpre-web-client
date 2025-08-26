@@ -53,7 +53,7 @@ const Sidebar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 h-screen w-20 md:w-72 bg-[#ebf2ff] text-[#374151] flex flex-col shadow-md transition-all duration-300">
+    <nav className="fixed top-0 left-0 h-screen w-20 md:w-72 bg-[#ebf2ff] text-[#374151] flex flex-col shadow-md transition-all duration-300 z-50">
       <div className="flex items-center justify-center md:justify-start h-20 px-4 mt-6 mb-6">
         <img src="/Dokuprime.svg" alt="Logo" className="w-[90%] pl-4" />
       </div>

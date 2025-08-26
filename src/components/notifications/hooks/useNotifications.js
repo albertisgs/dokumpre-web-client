@@ -1,22 +1,8 @@
 // src/components/notifications/hooks/useNotifications.js
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {  useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 
 // Hook untuk mengambil notifikasi
-export const useGetNotifications = () => {
-  const queryClient = useQueryClient();
-  return useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const response = await axiosInstance.generalSession.get('/api/notifications/');
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['get-notifications'] });
-    },
-    staleTime: 1000 * 60, // 1 menit
-  });
-};
 
 // Hook untuk menandai semua sebagai sudah dibaca
 export const useMarkAllAsRead = () => {
@@ -36,8 +22,47 @@ export const useMarkOneAsRead = () => {
     mutationFn: (notificationId) => 
       axiosInstance.generalSession.post(`/api/notifications/${notificationId}/read`),
     onSuccess: () => {
-      // Refresh daftar notifikasi setelah berhasil
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
+};
+
+// --- TAMBAHKAN HOOK BARU DI BAWAH INI ---
+export const useDismissNotification = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (userNotificationId) =>
+            axiosInstance.generalSession.delete(`/api/notifications/${userNotificationId}`),
+        
+        // Optimistic update untuk menghapus notifikasi dari UI secara instan
+        onMutate: async (userNotificationId) => {
+            await queryClient.cancelQueries({ queryKey: ['notifications'] });
+            const previousNotifications = queryClient.getQueryData(['notifications']);
+            
+            queryClient.setQueryData(['notifications'], (oldData) => {
+                if (!oldData) return oldData;
+
+                const newData = {
+                    ...oldData,
+                    pages: oldData.pages.map(page => ({
+                        ...page,
+                        notifications: page.notifications.filter(notif => notif.id !== userNotificationId)
+                    }))
+                };
+                return newData;
+            });
+
+            return { previousNotifications };
+        },
+        onError: (err, variables, context) => {
+            // Jika gagal, kembalikan data notifikasi seperti semula
+            if (context.previousNotifications) {
+                queryClient.setQueryData(['notifications'], context.previousNotifications);
+            }
+        },
+        onSettled: () => {
+            // Selalu refetch data setelah mutasi selesai (baik sukses maupun gagal)
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        },
+    });
 };

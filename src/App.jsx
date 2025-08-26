@@ -116,7 +116,7 @@ const AppContent = () => {
       notificationChannel.bind("new-notification", (data) => {
      
         queryClient.invalidateQueries({
-          queryKey: ["get-notifications"],
+          queryKey: ["notifications"],
         });
         queryClient.invalidateQueries({
           queryKey: [ "syncPromptData"],

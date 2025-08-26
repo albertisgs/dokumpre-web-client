@@ -1,8 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { useInfiniteNotifications } from './hooks/useInfiniteNotifications'; // <-- Gunakan hook baru
-import { useMarkAllAsRead, useMarkOneAsRead } from './hooks/useNotifications'; // Hook ini tetap dipakai
-import { Bell, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useInfiniteNotifications } from './hooks/useInfiniteNotifications';
+import { useMarkAllAsRead, useMarkOneAsRead, useDismissNotification } from './hooks/useNotifications'; // <-- Import hook baru
+import { Bell, Loader2, Check, X } from 'lucide-react'; // <-- Import ikon baru
 
 const Notifications = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,11 +16,12 @@ const Notifications = () => {
     isError
   } = useInfiniteNotifications();
   
-  const { mutate: markAllAsRead, isPending } = useMarkAllAsRead();
+  const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllAsRead();
+  const { mutate: markOneAsRead } = useMarkOneAsRead();
+  const { mutate: dismissNotification } = useDismissNotification(); // <-- Panggil hook baru
 
   const unreadCount = data?.pages?.[0]?.unread_count || 0;
 
-  // Logic untuk infinite scroll
   const observer = useRef();
   const lastNotificationElementRef = useCallback(node => {
     if (isLoading || isFetchingNextPage) return;
@@ -36,20 +36,18 @@ const Notifications = () => {
     if (node) observer.current.observe(node);
   }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
-   const { mutate: markOneAsRead } = useMarkOneAsRead();
-
-    const handleNotificationClick = (notif) => {
-        // Tandai sebagai sudah dibaca hanya jika belum dibaca
-        if (!notif.is_read) {
-            markOneAsRead(notif.id);
-        }
-        // Navigasi tetap berjalan jika ada link
-        if (notif.link_to) {
-            window.location.href = notif.link_to;
-        }
-    };
-
-  // Fungsi utilitas untuk format waktu
+  const handleNotificationClick = (notif) => {
+    if (!notif.is_read) {
+        markOneAsRead(notif.id);
+    }
+    if (notif.link_to) {
+        // Navigasi ke link setelah sedikit jeda agar user bisa melihat status berubah
+        setTimeout(() => {
+             window.location.href = notif.link_to;
+        }, 100);
+    }
+  };
+  
   const timeSince = (date) => {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     let interval = seconds / 3600;
@@ -62,10 +60,7 @@ const Notifications = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(prev => !prev)}
-        className="flex flex-col justify-center text-gray-600 hover:text-gray-800"
-      >
+      <button onClick={() => setIsOpen(prev => !prev)} className="flex flex-col justify-center text-gray-600 hover:text-gray-800">
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -79,7 +74,7 @@ const Notifications = () => {
           <div className="notification-dropdown-header flex justify-between items-center">
             <span>Notifications</span>
             {unreadCount > 0 && (
-                <button onClick={() => markAllAsRead()} disabled={isPending} className="text-sm font-medium text-blue-600 hover:underline">
+                <button onClick={() => markAllAsRead()} disabled={isMarkingAll} className="text-sm font-medium text-blue-600 hover:underline">
                     Mark all as read
                 </button>
             )}
@@ -93,17 +88,28 @@ const Notifications = () => {
                 {page.notifications.map((notif, index) => {
                   const isLastElement = index === page.notifications.length - 1;
                   return (
-                    <div // <-- GANTI <a> DENGAN <div>
+                    <div
                       ref={isLastElement ? lastNotificationElementRef : null} 
                       key={notif.id} 
-                      onClick={() => handleNotificationClick(notif)} // <-- TAMBAHKAN onClick
-                      className={`notification-dropdown-item group flex items-start ${!notif.is_read ? 'notification-item-unread' : 'notification-item-read'} cursor-pointer`}
+                      className={`group pl-4 pr-2 space-y-3 py-2 flex items-start ${!notif.is_read ? 'bg-blue-200':''}`}
                     >
-                      <span className="notification-item-dot mt-1.5"></span>
-                      <div className="flex-grow">
+                      <span className={`notification-item-dot mt-1.5 ${!notif.is_read ? 'opacity-100':'opacity-0'}`}></span>
+                      <div className="flex-grow cursor-pointer" onClick={() => handleNotificationClick(notif)}>
                         <p className="font-medium text-sm">{notif.title}</p>
                         {notif.message && <p className="text-sm text-gray-600">{notif.message}</p>}
                         <p className="text-xs text-gray-500">{timeSince(notif.created_at)}</p>
+                      </div>
+                      
+                      {/* --- TOMBOL AKSI BARU --- */}
+                      <div className="flex items-center space-x-2 ml-2 transition-opacity">
+                        {!notif.is_read && (
+                          <button onClick={() => markOneAsRead(notif.id)} title="Mark as read" className="p-1 rounded-full hover:bg-green-100 text-gray-600 hover:text-green-600">
+                            <Check className="w-4 h-4"/>
+                          </button>
+                        )}
+                        <button onClick={() => dismissNotification(notif.id)} title="Dismiss" className="p-1 rounded-full hover:bg-red-100 text-gray-600 hover:text-red-600">
+                          <X className="w-4 h-4"/>
+                        </button>
                       </div>
                     </div>
                   );
@@ -112,11 +118,9 @@ const Notifications = () => {
             ))}
             
             {isFetchingNextPage && <div className="p-2 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400"/></div>}
-            
             {!hasNextPage && !isLoading && data?.pages[0].notifications.length > 0 &&
               <div className="p-3 text-center text-xs text-gray-400 border-t border-gray-200">No more notifications</div>
             }
-
             {!isLoading && data?.pages[0].notifications.length === 0 &&
               <div className="p-4 text-center text-gray-500">You have no notifications</div>
             }
