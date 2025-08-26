@@ -1,11 +1,14 @@
 
 import { useLogin } from "./hooks/useLogin";
+import { Loader2 } from "lucide-react"
+
 const Login = () => {
   const {
     email,
     setEmail,
     password,
     setPassword,
+    loading,
     handleGoogleBESubmit,
     handleSubmit,
     handleMicrosoftSubmit
@@ -95,9 +98,17 @@ const Login = () => {
             <button
               type="submit"
               onClick={handleSubmit}
-              className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+              disabled={loading} // 3. Nonaktifkan tombol saat loading
+              className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer disabled:bg-blue-400 disabled:cursor-not-allowed"
             >
-              Sign In
+              {loading ? ( // 4. Tampilkan spinner jika loading, atau teks jika tidak
+                <>
+                  <Loader2 className="animate-spin h-5 w-5 mr-3" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </button>
           </form>
 

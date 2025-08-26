@@ -6,6 +6,7 @@ import { MicrosoftLogout } from "../pages/Login/handler/logoutMicrosoft";
 import { menu } from "../configs/menu";
 import { handleLogoutSession } from "../pages/Login/handler/logoutHandler";
 import { useAuth } from "../context/hooks/UseAuth";
+import Notifications from "../components/notifications/Notifications";
 
 const Header = () => {
   const location = useLocation();
@@ -75,7 +76,7 @@ const Header = () => {
         className="flex items-center gap-4 relative cursor-not-allowed"
         ref={menuRef}
       >
-        <img src="/active.svg" className="w-7 h-7" />
+        <Notifications/>
 
         <div className="relative z-30">
           <img
