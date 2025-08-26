@@ -4,11 +4,15 @@ import axiosInstance from '../../../axios/axiosInstance';
 
 // Hook untuk mengambil notifikasi
 export const useGetNotifications = () => {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
       const response = await axiosInstance.generalSession.get('/api/notifications/');
       return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['get-notifications'] });
     },
     staleTime: 1000 * 60, // 1 menit
   });

@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }) => {
           access_list: profile.data.access_list,
           team: profile.data?.team_name,
           id_team: profile.data.id_team,
+          id_role: profile.data.id_role,
           permissions: profile.data.permissions || [],
         };
         

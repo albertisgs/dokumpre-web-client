@@ -27,6 +27,7 @@ export const useOAuthCallback = (provider,status) => {
               team: profile.data?.team_name,
               access_list: profile.data.access_list,
               id_team: profile.data.id_team,
+              id_role: profile.data.id_role,
               permissions: profile.data.permissions || [],
             },
             provider

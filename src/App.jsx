@@ -34,7 +34,6 @@ const AppContent = () => {
 
     const pusher = new Pusher(PusherKey, { cluster: PusherCluster });
     const user = authState.user;
-    const user_id = user?.id;
 
     // 1. Channel untuk notifikasi scrapping (Struktur Asli)
     const scrappingChannel = pusher.subscribe("Scrapping-notification");
@@ -86,6 +85,18 @@ const AppContent = () => {
       verifySession();
     });
 
+    // --- LISTENER BARU UNTUK PERMISSION CHANGE DI DALAM TIM ---
+    const rolePermissionsChannelName = `role-updates-${user.id_role}`;
+    console.log(rolePermissionsChannelName);
+    const rolePermissionsChannel = pusher.subscribe(rolePermissionsChannelName);
+    rolePermissionsChannel.bind("permissions-changed", (data) => {
+      console.log("Permissions changed for your team:", data.message);
+      toast.success(
+        "Permissions for a role in your team have changed. Refreshing session..."
+      );
+      verifySession();
+    });
+
     // --- LISTENER BARU UNTUK PROMPT STATUS CHANGE ---
     const promptChannelName = `prompt-updates-${user.team?.replace(" ", "_")}`;
     const promptChannel = pusher.subscribe(promptChannelName);
@@ -93,16 +104,23 @@ const AppContent = () => {
       toast.success(data.message);
       queryClient.invalidateQueries({ queryKey: ["syncPromptData"] });
     });
+    console.log(user.email);
 
     // --- LISTENER BARU UNTUK NOTIFIKASI PRIBADI ---
-    if (user_id) {
-      const notificationChannelName = `private-notifications-${user_id}`;
+    if (user && user.email) {
+      // Gunakan user.email untuk pengecekan dan nama channel
+      const notificationChannelName = `notifications-${user.email}`; // <-- Menggunakan user.email
+      console.log(notificationChannelName)
       const notificationChannel = pusher.subscribe(notificationChannelName);
 
       notificationChannel.bind("new-notification", (data) => {
-        toast.success(data.title); // Tampilkan toast simpel
-        // Refresh daftar notifikasi di bell icon
-        queryClient.invalidateQueries({ queryKey: ["notifications","syncPromptData"] });
+     
+        queryClient.invalidateQueries({
+          queryKey: ["get-notifications"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [ "syncPromptData"],
+        });
       });
     }
 
@@ -112,9 +130,10 @@ const AppContent = () => {
       pusher.unsubscribe("team-updates");
       pusher.unsubscribe(userChannelName);
       pusher.unsubscribe(teamPermissionsChannelName);
+      pusher.unsubscribe(rolePermissionsChannelName);
       pusher.unsubscribe(promptChannelName);
-      if (user_id) {
-        pusher.unsubscribe(`private-notifications-${user_id}`);
+      if (user && user.email) {
+        pusher.unsubscribe(`notifications-${user.email}`);
       }
       pusher.disconnect();
     };
