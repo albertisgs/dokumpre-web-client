@@ -1,3 +1,6 @@
+.env
+
+
 # Logs
 logs
 *.log
@@ -25,8 +28,3 @@ dist-ssr
 
 
 # Ignore real env files
-.env
-*.env
-
-# Jangan ignore template
-!.env.example

@@ -102,7 +102,7 @@ const AppContent = () => {
       notificationChannel.bind("new-notification", (data) => {
         toast.success(data.title); // Tampilkan toast simpel
         // Refresh daftar notifikasi di bell icon
-        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications","syncPromptData"] });
       });
     }
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useInfiniteNotifications } from './hooks/useInfiniteNotifications'; // <-- Gunakan hook baru
-import { useMarkAllAsRead } from './hooks/useNotifications'; // Hook ini tetap dipakai
+import { useMarkAllAsRead, useMarkOneAsRead } from './hooks/useNotifications'; // Hook ini tetap dipakai
 import { Bell, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -35,6 +35,19 @@ const Notifications = () => {
 
     if (node) observer.current.observe(node);
   }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+
+   const { mutate: markOneAsRead } = useMarkOneAsRead();
+
+    const handleNotificationClick = (notif) => {
+        // Tandai sebagai sudah dibaca hanya jika belum dibaca
+        if (!notif.is_read) {
+            markOneAsRead(notif.id);
+        }
+        // Navigasi tetap berjalan jika ada link
+        if (notif.link_to) {
+            window.location.href = notif.link_to;
+        }
+    };
 
   // Fungsi utilitas untuk format waktu
   const timeSince = (date) => {
@@ -80,11 +93,11 @@ const Notifications = () => {
                 {page.notifications.map((notif, index) => {
                   const isLastElement = index === page.notifications.length - 1;
                   return (
-                    <a 
+                    <div // <-- GANTI <a> DENGAN <div>
                       ref={isLastElement ? lastNotificationElementRef : null} 
                       key={notif.id} 
-                      href={notif.link_to || '#'} 
-                      className={`notification-dropdown-item group flex items-start ${!notif.is_read ? 'notification-item-unread' : 'notification-item-read'}`}
+                      onClick={() => handleNotificationClick(notif)} // <-- TAMBAHKAN onClick
+                      className={`notification-dropdown-item group flex items-start ${!notif.is_read ? 'notification-item-unread' : 'notification-item-read'} cursor-pointer`}
                     >
                       <span className="notification-item-dot mt-1.5"></span>
                       <div className="flex-grow">
@@ -92,7 +105,7 @@ const Notifications = () => {
                         {notif.message && <p className="text-sm text-gray-600">{notif.message}</p>}
                         <p className="text-xs text-gray-500">{timeSince(notif.created_at)}</p>
                       </div>
-                    </a>
+                    </div>
                   );
                 })}
               </React.Fragment>

@@ -25,3 +25,15 @@ export const useMarkAllAsRead = () => {
     },
   });
 };
+
+export const useMarkOneAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId) => 
+      axiosInstance.generalSession.post(`/api/notifications/${notificationId}/read`),
+    onSuccess: () => {
+      // Refresh daftar notifikasi setelah berhasil
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
