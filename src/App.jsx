@@ -153,19 +153,42 @@ function App() {
   return (
     <AuthProvider>
       <Toaster position="bottom-right" />
-      <Suspense
-        fallback={
-          <div className="p-6 flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <Loader2 className="animate-spin w-8 h-8 mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600">Loading...</p>
-            </div>
-          </div>
-        }
-      >
-        <AppContent />
-      </Suspense>
+      <MainApp/>
     </AuthProvider>
+  );
+}
+
+// --- BUAT KOMPONEN BARU INI ---
+const MainApp = () => {
+  // Ambil status inisialisasi dari context
+  const { isInitializing } = useAuth();
+
+  // Jika sedang inisialisasi, tampilkan loading layar penuh
+  if (isInitializing) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="animate-spin w-8 h-8 mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Memverifikasi sesi...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Jika sudah selesai, baru tampilkan aplikasi utama
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="animate-spin w-8 h-8 mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <AppContent />
+    </Suspense>
   );
 }
 

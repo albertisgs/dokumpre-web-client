@@ -9,7 +9,7 @@ const MicrosoftCallback = () => {
   const queryParams = new URLSearchParams(location.search);
   const status = queryParams.get("status");
 
-  useOAuthCallback("microsoft", status)
+  useOAuthCallback(status)
 
  useEffect(() => {
     if (status === "login-failed") {

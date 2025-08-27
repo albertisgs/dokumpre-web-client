@@ -19,7 +19,7 @@ const GoogleCallback = () => {
   );
 
   // 2. Panggil hook di top level dengan provider 'google' dan status saat ini
-  useOAuthCallback("google", status);
+  useOAuthCallback(status);
 
   // 3. Gunakan useEffect hanya untuk menangani kasus gagal atau status tidak valid
   useEffect(() => {

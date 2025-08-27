@@ -29,8 +29,8 @@ export const handleCredentialLogin = async (
             id_team: profile.data.id_team,
             id_role: profile.data.id_role,
             permissions: profile.data.permissions || [],
+            account_type: profile.data.account_type,
           },
-          "credential"
         );
         
         navigate("/");

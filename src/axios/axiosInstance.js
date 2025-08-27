@@ -24,19 +24,19 @@ const AxiosInstanceSession = (baseURL) => {
   instance.interceptors.response.use(
     (response) => response, // Jika response sukses (2xx), langsung kembalikan
     (error) => {
-      // Jika response gagal
-      if (error.response && error.response.status === 401) {
-        // Cek jika error adalah 401 Unauthorized
-        console.error("Sesi tidak valid atau telah berakhir. Melakukan logout...");
+      const { response, config } = error;
+      const ignoredUrls = ['api/auth/sign-in', 'api/auth/me'];
+      // Cek apakah response 401 dan URL-nya BUKAN salah satu dari yang diabaikan
+      if (response && response.status === 401 && !ignoredUrls.includes(config.url)) {
+        console.error("Sesi tidak valid di halaman lain. Melakukan logout...");
         
-        // Hapus data sesi dari localStorage
         localStorage.removeItem('authType');
         localStorage.removeItem('user');
         
+        // Lakukan redirect hanya jika error terjadi di luar halaman login atau verifikasi sesi
         window.location.href = '/login';
       }
       
-      // Kembalikan error agar bisa ditangani lebih lanjut jika perlu
       return Promise.reject(error);
     }
   );

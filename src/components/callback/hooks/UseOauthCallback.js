@@ -4,7 +4,7 @@ import axiosInstance from '../../../axios/axiosInstance';
 import { useAuth } from '../../../context/hooks/useAuth';
 
 
-export const useOAuthCallback = (provider,status) => {
+export const useOAuthCallback = (status) => {
   const navigate = useNavigate();
   const { updateAuth, logout } = useAuth();
 
@@ -29,8 +29,9 @@ export const useOAuthCallback = (provider,status) => {
               id_team: profile.data.id_team,
               id_role: profile.data.id_role,
               permissions: profile.data.permissions || [],
+              account_type: profile.data.account_type,
             },
-            provider
+
           );
           navigate("/");
         } else {
@@ -44,5 +45,5 @@ export const useOAuthCallback = (provider,status) => {
     };
 
     verifyUser();
-  }, [provider, status, updateAuth, navigate, logout]);
+  }, [ status, updateAuth, navigate, logout]);
 };

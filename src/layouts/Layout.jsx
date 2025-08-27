@@ -21,7 +21,6 @@ const Layout = () => {
   const noSidebarRoutes = ["/login"];
 
   const showSidebar = !noSidebarRoutes.includes(location.pathname);
-  console.log(showSidebar)
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
