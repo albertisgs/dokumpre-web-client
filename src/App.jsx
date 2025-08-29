@@ -66,6 +66,7 @@ const AppContent = () => {
       );
       verifySession();
     });
+
     // --- LISTENER BARU UNTUK ROLE CHANGE ---
     userChannel.bind("role-changed", (data) => {
       toast.success(
@@ -124,10 +125,29 @@ const AppContent = () => {
       });
     }
 
+
+    if (user && user.email) {
+      // Channel untuk memantau update status dokumen legal
+      const legalChannel = pusher.subscribe('legal-documents');
+
+      legalChannel.bind('status-update', (data) => {
+        console.log('Received status update:', data);
+        
+        // Tampilkan notifikasi toast
+        toast.success(`Dokumen telah selesai diproses dengan status: ${data.status}`);
+
+        // Invalidate query untuk data dokumen legal agar tabel di-refetch otomatis
+        queryClient.invalidateQueries(['legalDocuments']);
+      });
+    }
+
+
+
     // Cleanup semua channel saat komponen unmount
     return () => {
       pusher.unsubscribe("Scrapping-notification");
       pusher.unsubscribe("team-updates");
+      pusher.unsubscribe('legal-documents');
       pusher.unsubscribe(userChannelName);
       pusher.unsubscribe(teamPermissionsChannelName);
       pusher.unsubscribe(rolePermissionsChannelName);

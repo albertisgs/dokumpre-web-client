@@ -2,10 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
 import toast from 'react-hot-toast';
 
-// --- 1. Fetch semua dokumen ---
+// --- fetchLegalDocuments (Tidak berubah) ---
 const fetchLegalDocuments = async () => {
   const response = await axiosInstance.generalSession.get('/api/legal-documents/');
-  // Sortir data terbaru di atas
   return response.data.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date));
 };
 
@@ -16,52 +15,48 @@ export const useGetLegalDocuments = () => {
   });
 };
 
-
-// --- 2. Upload dokumen baru ---
-const uploadDocument = async ({ file, onUploadProgress }) => {
+// --- PERUBAHAN DI SINI ---
+// Fungsi ini sekarang menerima objek yang berisi 'files' dan callback 'onProgress'
+const uploadDocumentsBatch = async ({ files, onProgress }) => {
   const formData = new FormData();
-  formData.append('file', file);
+  files.forEach(file => {
+    formData.append('files', file);
+  });
 
+  // Tambahkan kembali konfigurasi onUploadProgress
   const response = await axiosInstance.generalSession.post(
     '/api/legal-documents/upload', 
     formData, 
     {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        // Kalkulasi persentase
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        // Panggil callback untuk update UI
+        if (onProgress) {
+          onProgress(percentCompleted);
+        }
       },
-      // Inilah bagian penting untuk melacak progres
-      onUploadProgress: onUploadProgress
     }
   );
   return response.data;
 };
 
-export const useUploadDocument = (setUploadProgress) => {
+export const useUploadDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file) => {
-      // Buat fungsi callback untuk dioper ke axios
-      const onUploadProgress = (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUploadProgress(percentCompleted); // Perbarui state progres di komponen
-      };
-      return uploadDocument({ file, onUploadProgress });
-    },
+    mutationFn: uploadDocumentsBatch,
     onSuccess: (data) => {
-      toast.success(`Dokumen "${data.document.document_name}" berhasil diunggah!`);
+      toast.success(data.message || 'Files sent for processing!');
       queryClient.invalidateQueries({ queryKey: ['legalDocuments'] });
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Gagal mengunggah dokumen.');
+      toast.error(error.response?.data?.detail || 'Gagal memulai proses unggah.');
     },
-    onSettled: () => {
-      // Reset progres menjadi 0 setelah selesai (baik sukses maupun gagal)
-      setTimeout(() => setUploadProgress(0), 1000);
-    }
   });
 };
 
-// --- 3. Hapus dokumen ---
+// --- Sisanya tidak berubah ---
 const deleteDocument = async (docId) => {
   const response = await axiosInstance.generalSession.delete(`/api/legal-documents/${docId}`);
   return response.data;

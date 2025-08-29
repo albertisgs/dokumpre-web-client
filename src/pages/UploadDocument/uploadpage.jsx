@@ -12,6 +12,10 @@ import {
   FileText,
   X,
   FileImage,
+  CheckCircle2, 
+  AlertCircle,
+  Clock,
+  Eye,   
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -29,7 +33,7 @@ export default function UploadPage() {
     isLoading: isLoadingDocs,
     isError,
   } = useGetLegalDocuments();
-  const { mutate: uploadFile, isPending: isUploading } =
+  const { mutate: uploadFiles, isPending: isUploading } =
     useUploadDocument(setUploadProgress);
   const { mutate: deleteFile } = useDeleteDocument();
   const { mutate: deleteMultiple, isPending: isDeletingMultiple } =
@@ -74,14 +78,22 @@ export default function UploadPage() {
     setFilesToUpload((prev) => prev.filter((f) => f.name !== fileName));
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (filesToUpload.length === 0) return;
+    // Set progress ke 0 saat mulai
+    setUploadProgress(0); 
 
-    // Upload file satu per satu
-    for (const file of filesToUpload) {
-      await uploadFile(file);
-    }
-    setFilesToUpload([]);
+    uploadFiles({ files: filesToUpload, onProgress: setUploadProgress }, {
+      onSuccess: () => {
+        setFilesToUpload([]); // Kosongkan daftar file setelah berhasil
+        // Reset progress setelah beberapa saat agar user bisa melihat 100%
+        setTimeout(() => setUploadProgress(0), 1000); 
+      },
+      onError: () => {
+         // Reset progress jika error
+        setUploadProgress(0);
+      }
+    });
   };
 
   const handleDelete = (docId) => {
@@ -135,6 +147,19 @@ export default function UploadPage() {
     }
     // Asumsikan sisanya adalah dokumen
     return <FileText className="w-5 h-5 text-red-500" />;
+  };
+
+  const getStatusComponent = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+        return <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800"><CheckCircle2 className="w-3 h-3 mr-1" /> Selesai</span>;
+      case 'pending':
+        return <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 animate-pulse"><Clock className="w-3 h-3 mr-1" /> Memproses</span>;
+      case 'failed':
+        return <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" /> Gagal</span>;
+      default:
+        return <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+    }
   };
 
   return (
@@ -238,22 +263,13 @@ export default function UploadPage() {
       </div>
 
       {/* --- Tabel Dokumen Terunggah --- */}
+            {/* --- Tabel Dokumen Terunggah (diperbarui) --- */}
       <div className="bg-white p-6 rounded-lg shadow-md mt-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Dokumen Tersimpan</h2>
-
-          {/* Tombol Multiple Delete (muncul saat ada yg dipilih) */}
           {selectedDocs.length > 0 && (
-            <button
-              onClick={handleMultipleDelete}
-              disabled={isDeletingMultiple}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center disabled:bg-gray-400"
-            >
-              {isDeletingMultiple ? (
-                <Loader2 className="animate-spin h-5 w-5 mr-2" />
-              ) : (
-                <Trash2 className="h-5 w-5 mr-2" />
-              )}
+            <button onClick={handleMultipleDelete} disabled={isDeletingMultiple} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center disabled:bg-gray-400">
+              {isDeletingMultiple ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Trash2 className="h-5 w-5 mr-2" />}
               Hapus ({selectedDocs.length})
             </button>
           )}
@@ -263,99 +279,36 @@ export default function UploadPage() {
           <table className="w-full text-sm text-left text-gray-500 table-fixed">
             <thead className="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
               <tr>
-                {/* 6. Header Checkbox "Select All" */}
-                <th className="px-4 py-4 w-1/24">
-                  <input
-                    type="checkbox"
-                    onChange={handleSelectAll}
-                    // Cek jika semua dokumen terpilih & ada dokumen
-                    checked={
-                      documents &&
-                      documents.length > 0 &&
-                      selectedDocs.length === documents.length
-                    }
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                </th>
-                <th className="px-6 py-4 w-1/12">Upload Date</th>{" "}
-                {/* Lebar 16.67% */}
-                <th className="px-6 py-4 w-4/12">Document Name</th>{" "}
-                {/* Lebar 33.33% - Kolom terlebar */}
-                <th className="px-6 py-4 w-2/12">Document Type</th>
+                <th className="px-4 py-4 w-1/24"><input type="checkbox" onChange={handleSelectAll} checked={documents && documents.length > 0 && selectedDocs.length === documents.length} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"/></th>
+                <th className="px-6 py-4 w-1/12">Tanggal Unggah</th>
+                <th className="px-6 py-4 w-4/12">Nama Dokumen</th>
+                <th className="px-6 py-4 w-2/12">Tipe</th>
                 <th className="px-6 py-4 w-1/12">Staff</th>
-                <th className="px-6 py-4 w-1/12">Team</th>
+                <th className="px-6 py-4 w-1/12">Tim</th>
                 <th className="px-6 py-4 w-1/12">Status</th>
-                <th className="px-6 py-4 w-1/12 text-center">Actions</th>
+                <th className="px-6 py-4 w-1/12 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {isLoadingDocs ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-4">
-                    <Loader2 className="animate-spin inline-block" />
-                  </td>
-                </tr>
-              ) : isError ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-4 text-red-500">
-                    Gagal memuat data.
-                  </td>
-                </tr>
-              ) : documents && documents.length > 0 ? (
+              {isLoadingDocs ? ( <tr><td colSpan="8" className="text-center py-4"><Loader2 className="animate-spin inline-block" /></td></tr> )
+               : isError ? ( <tr><td colSpan="8" className="text-center py-4 text-red-500">Gagal memuat data.</td></tr> )
+               : documents && documents.length > 0 ? (
                 documents.map((doc) => (
-                  <tr
-                    key={doc.id}
-                    className="bg-white border-b hover:bg-gray-50 border-gray-200"
-                  >
-                    <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        onChange={(e) => handleSelectOne(e, doc.id)}
-                        checked={selectedDocs.includes(doc.id)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      {new Date(doc.upload_date).toLocaleDateString("id-ID")}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-gray-900 break-words">
-                      {doc.document_name}
-                    </td>
+                  <tr key={doc.id} className="bg-white border-b hover:bg-gray-50 border-gray-200">
+                    <td className="px-4 py-4"><input type="checkbox" onChange={(e) => handleSelectOne(e, doc.id)} checked={selectedDocs.includes(doc.id)} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"/></td>
+                    <td className="px-6 py-4">{new Date(doc.upload_date).toLocaleDateString("id-ID")}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900 break-words">{doc.document_name}</td>
                     <td className="px-6 py-4">{doc.document_type}</td>
                     <td className="px-6 py-4">{doc.staff}</td>
                     <td className="px-6 py-4">{doc.team}</td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                        {doc.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center space-x-4">
-                      <a
-                        href={`${import.meta.env.VITE_API_URL_GENERAL}/public/${
-                          doc.file_path
-                        }`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        View
-                      </a>
-                      <button
-                        onClick={() => handleDelete(doc.id)}
-                        className="font-medium text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
+                    <td className="px-6 py-4">{getStatusComponent(doc.status)}</td>
+                    <td className="px-6 py-4 flex justify-center gap-2">
+                      <a href={`${import.meta.env.VITE_API_URL_GENERAL}/public${doc.file_path}`} target="_blank" rel="noopener noreferrer" className={`font-medium text-blue-600 hover:underline ${doc.status !== 'completed' && 'pointer-events-none text-gray-400'}`}><Eye className="w-4 h-4"/></a>
+                      <button onClick={() => handleDelete(doc.id)} className="font-medium text-red-600 hover:underline"><Trash2 className="w-4 h-4"/></button>
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="text-center py-4">
-                    Belum ada dokumen yang diunggah.
-                  </td>
-                </tr>
-              )}
+              ) : ( <tr><td colSpan="8" className="text-center py-4">Belum ada dokumen yang diunggah.</td></tr> )}
             </tbody>
           </table>
         </div>
