@@ -9,6 +9,7 @@ const SippPage = lazy(()=>import('../pages/SippCaseDetails/sippcasepage'))
 const UserManagement = lazy(()=>import('../pages/UserManagament/usermanagement'))
 const TeamManagementPage = lazy(()=>import('../pages/TeamManagement/TeamManagement'))
 const RoleManagementPage = lazy(()=>import('../pages/RoleManagement/RoleManagement'))
+const ServicePublicPage = lazy(()=>import('../pages/PublicService/ServicePublicChat'))
 export const menu = [
   {
     title: 'Dashboard',
@@ -50,6 +51,13 @@ export const menu = [
 
   },
   {
+    title: 'Service Public',
+    path: '/service-public',
+    identifier: 'service-public',
+    icon: '/shield.svg', // Ganti dengan ikon yang sesuai
+    component: ServicePublicPage,
+  },
+  {
     title: 'SIPP Case Details',
     path: '/sipp-case-details',
     identifier: 'sipp-case-details',
@@ -78,5 +86,5 @@ export const menu = [
     icon: '/shield.svg', // Ganti dengan ikon yang sesuai
     component: RoleManagementPage,
   },
-
+   
 ];
