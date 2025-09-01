@@ -74,7 +74,7 @@ const ServicePublicChat = () => {
     const botMessageId = `agent-${Date.now()}`;
 
     try {
-      const response = await fetch('http://localhost/v1/chat-messages', {
+      const response = await fetch(`${import.meta.env.VITE_API_DITY_CHAT}/chat-messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_DIFY_API_KEY}`,
@@ -120,7 +120,7 @@ const ServicePublicChat = () => {
                   msg.id === botMessageId ? { ...msg, text: fullResponse } : msg
                 ));
               }
-            }
+            }  
 
             if (data.event === 'message_end' && data.metadata?.retriever_resources) {
               const newCitations = data.metadata.retriever_resources.map(resource => ({
@@ -128,7 +128,7 @@ const ServicePublicChat = () => {
                 documentName: resource.document_name,
                 content: resource.content, // <-- TAMBAHKAN BARIS INI
               }));
-              setCitations(prev => [...prev, ...newCitations]);
+              setCitations(prev => [...prev, ...newCitations]);      
             }
           } catch (error) { /* Abaikan error parsing */ }
         }
