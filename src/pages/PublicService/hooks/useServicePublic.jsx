@@ -20,7 +20,7 @@ const postUserMessageToAgent = async ({ sessionId, text }) => {
   const { data } = await axiosInstance.generalSession.post(
     `/api/live-chat/${sessionId}/send-message`,
     { text }
-  ); // Endpoint ini belum ada di backend, perlu dibuat
+  );
   return data;
 };
 
@@ -121,7 +121,7 @@ export const useServicePublicChat = () => {
         const decoder = new TextDecoder();
         let fullResponse = "";
         const botMessageId = `bot-${Date.now()}`;
-        let isFirstChunk = true; // <-- DIKEMBALIKAN
+        let isFirstChunk = true;
 
         let readerDone = false;
         while (!readerDone) {
@@ -141,7 +141,6 @@ export const useServicePublicChat = () => {
               if (data.conversation_id)
                 setDifyConversationId(data.conversation_id);
 
-              // --- FIX: KEMBALIKAN LOGIKA LAMA ---
               if (data.event === "message" || data.event === "agent_message") {
                 fullResponse += data.answer;
                 if (isFirstChunk) {
@@ -160,7 +159,6 @@ export const useServicePublicChat = () => {
                   );
                 }
               }
-              // --- AKHIR FIX ---
 
               if (
                 data.event === "message_end" &&
@@ -183,7 +181,6 @@ export const useServicePublicChat = () => {
 
         if (fullResponse.includes("<trigger_agent>")) {
           setShowAgentTrigger(true);
-          // Hapus trigger_agent dari pesan terakhir
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === botMessageId
@@ -209,7 +206,6 @@ export const useServicePublicChat = () => {
         setIsBotLoading(false);
       }
     } else if (chatMode === "agent") {
-      // Jika mode agent
       sendMessageToAgent({ sessionId: liveChatSessionId, text: currentInput });
     }
   };
@@ -217,7 +213,7 @@ export const useServicePublicChat = () => {
   useEffect(() => {
     const pusherKey = import.meta.env.VITE_PUSHER_KEY;
     const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
-    if (!pusherKey || !pusherCluster) return;
+    if (!pusherKey || !pusherCluster || !authState.user?.id) return;
 
     const pusher = new Pusher(pusherKey, { cluster: pusherCluster });
     let sessionChannel;
@@ -235,23 +231,12 @@ export const useServicePublicChat = () => {
           },
         ]);
       });
-      sessionChannel.bind("session-ended", () => {
-        setChatMode("bot");
-        setLiveChatSessionId(null);
-        toast.success("Sesi chat dengan agen telah berakhir.");
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `system-${Date.now()}`,
-            sender: "system",
-            text: "Sesi chat berakhir.",
-          },
-        ]);
-      });
     }
 
-    const userChannelName = `user-chat-${authState.user?.id}`;
+    // FIX: Gunakan user_id dari authState untuk nama channel
+    const userChannelName = `user-chat-${authState.user.id}`;
     const userChannel = pusher.subscribe(userChannelName);
+
     userChannel.bind("agent-connected", (data) => {
       if (data.session_id === liveChatSessionId) {
         setChatMode("agent");
@@ -261,10 +246,25 @@ export const useServicePublicChat = () => {
           {
             id: `system-${Date.now()}`,
             sender: "system",
-            text: "Agen telah terhubung.",
+            text: `Agen ${data.agent_name} telah terhubung.`,
           },
         ]);
       }
+    });
+
+    // FIX: Dengarkan event 'session-resolved'
+    userChannel.bind("session-resolved", () => {
+      setChatMode("bot");
+      setLiveChatSessionId(null);
+      toast.success("Sesi chat dengan agen telah berakhir.");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `system-${Date.now()}`,
+          sender: "system",
+          text: "Sesi chat berakhir. Anda kembali terhubung dengan bot.",
+        },
+      ]);
     });
 
     return () => {

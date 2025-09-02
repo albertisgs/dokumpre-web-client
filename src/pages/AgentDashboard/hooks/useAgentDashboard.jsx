@@ -13,7 +13,6 @@ const fetchQueue = async () => {
 };
 
 const claimChatSession = async (sessionId) => {
-    // Fungsi ini sudah benar, memanggil endpoint dengan sessionId
     const { data } = await axiosInstance.generalSession.post(`/api/live-chat/sessions/${sessionId}/claim`);
     return data;
 };
@@ -44,28 +43,20 @@ const useAgentDashboard = () => {
     const { mutate: claimChat, isPending: isClaiming } = useMutation({
         mutationFn: claimChatSession,
         onSuccess: (data) => {
-            // ✅ PERBAIKAN: Logika pemrosesan data setelah sesi berhasil diklaim
-            
-            // 1. Dapatkan nama pengguna dari antrian untuk ditampilkan di UI
             const claimedQueueItem = queue.find(item => item.session_id === data.id);
             const userName = claimedQueueItem?.user_name || 'Customer';
 
-            // 2. Set sesi yang aktif dengan informasi yang benar
             setActiveChat({ session_id: data.id, user_name: userName });
-            
-            // 3. Gabungkan riwayat dari bot dan pesan live chat yang sudah ada
-            // Tambahkan ID unik sementara ke riwayat bot untuk keperluan rendering React
+
             const historyMessages = data.history.map((h, index) => ({
                 ...h,
-                id: `history-${index}-${h.timestamp}`, 
+                id: `history-${index}-${new Date(h.timestamp).getTime()}`, 
             }));
 
             const allMessages = [...historyMessages, ...data.messages];
-            
-            // 4. Urutkan semua pesan berdasarkan timestamp untuk memastikan urutan kronologis
+
             allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-            // 5. Set state pesan dengan data yang sudah digabung dan diurutkan
             setMessages(allMessages);
 
             toast.success(`Anda terhubung dengan ${userName}`);
@@ -78,7 +69,7 @@ const useAgentDashboard = () => {
     const { mutate: sendMessage, isPending: isSendingMessage } = useMutation({
         mutationFn: postAgentMessage,
         onSuccess: () => {
-            setMessageInput(''); // Kosongkan input setelah berhasil
+            setMessageInput('');
         },
         onError: (error) => {
             toast.error(error.response?.data?.detail || "Gagal mengirim pesan.");
@@ -107,8 +98,7 @@ const useAgentDashboard = () => {
 
         const pusher = new Pusher(pusherKey, { cluster: pusherCluster });
         const queueChannel = pusher.subscribe('agent-dashboard');
-        
-        // Listener untuk update antrian (sesi baru atau sesi diklaim orang lain)
+
         const handleQueueUpdate = () => {
              queryClient.invalidateQueries({ queryKey: ['chatQueue'] });
         };
@@ -118,11 +108,11 @@ const useAgentDashboard = () => {
 
         let sessionChannel;
         if (activeChat) {
-            // ✅ PERBAIKAN: Gunakan nama channel yang konsisten dengan backend
             const channelName = `chat-session-${activeChat.session_id}`;
             sessionChannel = pusher.subscribe(channelName);
-            
+
             const handleNewMessage = (newMessage) => {
+                // FIX: Tambahkan pesan baru ke state
                 setMessages(prev => [...prev, newMessage]);
             };
             sessionChannel.bind('new_message', handleNewMessage);
@@ -133,7 +123,6 @@ const useAgentDashboard = () => {
             if (sessionChannel) {
                 pusher.unsubscribe(sessionChannel.name);
             }
-            // Jangan disconnect pusher di sini agar koneksi tetap terjaga
         };
     }, [queryClient, activeChat]);
 
