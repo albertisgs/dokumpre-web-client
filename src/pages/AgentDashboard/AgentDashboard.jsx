@@ -9,7 +9,8 @@ import { useAuth } from '../../context/hooks/useAuth';
 const QueueItem = ({ chat, activeChat, onSelectChat }) => (
     <div 
         className={`p-4 border-b border-gray-200 cursor-pointer transition-all duration-200 relative ${activeChat?.session_id === chat.session_id ? 'bg-blue-100 border-l-4 border-blue-500' : 'hover:bg-gray-50'}`}
-        onClick={() => onSelectChat(chat)}
+        onClick={() => onSelectChat(chat.session_id)}
+
     >
         <div className="flex justify-between items-center mb-2">
             <div className="font-bold text-sm text-gray-800">{chat.user_name}</div>

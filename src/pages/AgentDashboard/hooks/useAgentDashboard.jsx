@@ -1,5 +1,5 @@
-// src/pages/AgentDashboard/hooks/useAgentDashboard.js
-import { useState, useEffect, useCallback } from 'react';
+// src/pages/AgentDashboard/hooks/useAgentDashboard.jsx (Diperbaiki)
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Pusher from 'pusher-js';
 import axiosInstance from '../../../axios/axiosInstance';
@@ -13,17 +13,18 @@ const fetchQueue = async () => {
 };
 
 const claimChatSession = async (sessionId) => {
-    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/${sessionId}/claim`);
+    // Fungsi ini sudah benar, memanggil endpoint dengan sessionId
+    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/sessions/${sessionId}/claim`);
     return data;
 };
 
 const postAgentMessage = async ({ sessionId, text }) => {
-    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/${sessionId}/message`, { text });
+    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/sessions/${sessionId}/send-message`, { message_text: text });
     return data;
 };
 
 const endChatSession = async (sessionId) => {
-    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/${sessionId}/end`);
+    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/sessions/${sessionId}/resolve`);
     return data;
 };
 
@@ -43,21 +44,31 @@ const useAgentDashboard = () => {
     const { mutate: claimChat, isPending: isClaiming } = useMutation({
         mutationFn: claimChatSession,
         onSuccess: (data) => {
-            setActiveChat({ session_id: data.session_id, user_name: 'Customer' }); // Placeholder name, will be updated
+            // ✅ PERBAIKAN: Logika pemrosesan data setelah sesi berhasil diklaim
             
-            const historyMessages = data.dify_history.flatMap(h => [
-                { id: `dify-q-${h.created_at}`, sender_type: 'user', message_text: h.query, timestamp: h.created_at },
-                { id: `dify-a-${h.created_at}`, sender_type: 'system', message_text: `[From Chatbot] ${h.answer}`, timestamp: h.created_at }
-            ]);
+            // 1. Dapatkan nama pengguna dari antrian untuk ditampilkan di UI
+            const claimedQueueItem = queue.find(item => item.session_id === data.id);
+            const userName = claimedQueueItem?.user_name || 'Customer';
 
-            setMessages([...historyMessages, ...data.messages]);
-            toast.success(`Anda terhubung dengan chat #${data.session_id.substring(0, 8)}`);
+            // 2. Set sesi yang aktif dengan informasi yang benar
+            setActiveChat({ session_id: data.id, user_name: userName });
             
-            // Mengambil nama user dari item antrian yang sesuai untuk UI yang lebih baik
-            const claimedQueueItem = queue.find(item => item.session_id === data.session_id);
-            if (claimedQueueItem) {
-                setActiveChat(prev => ({ ...prev, user_name: claimedQueueItem.user_name }));
-            }
+            // 3. Gabungkan riwayat dari bot dan pesan live chat yang sudah ada
+            // Tambahkan ID unik sementara ke riwayat bot untuk keperluan rendering React
+            const historyMessages = data.history.map((h, index) => ({
+                ...h,
+                id: `history-${index}-${h.timestamp}`, 
+            }));
+
+            const allMessages = [...historyMessages, ...data.messages];
+            
+            // 4. Urutkan semua pesan berdasarkan timestamp untuk memastikan urutan kronologis
+            allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // 5. Set state pesan dengan data yang sudah digabung dan diurutkan
+            setMessages(allMessages);
+
+            toast.success(`Anda terhubung dengan ${userName}`);
         },
         onError: (error) => {
             toast.error(error.response?.data?.detail || "Gagal mengklaim chat.");
@@ -80,7 +91,6 @@ const useAgentDashboard = () => {
             toast.success(data.message || 'Sesi chat telah ditutup.');
             setActiveChat(null);
             setMessages([]);
-            // Meminta data antrian yang baru karena satu sesi telah selesai
             queryClient.invalidateQueries({ queryKey: ['chatQueue'] });
         },
         onError: (error) => {
@@ -98,31 +108,36 @@ const useAgentDashboard = () => {
         const pusher = new Pusher(pusherKey, { cluster: pusherCluster });
         const queueChannel = pusher.subscribe('agent-dashboard');
         
-        const handleQueueUpdate = (data) => {
-            queryClient.setQueryData(['chatQueue'], data.queue);
+        // Listener untuk update antrian (sesi baru atau sesi diklaim orang lain)
+        const handleQueueUpdate = () => {
+             queryClient.invalidateQueries({ queryKey: ['chatQueue'] });
         };
-        queueChannel.bind('queue-updated', handleQueueUpdate);
+        queueChannel.bind('new-pending-session', handleQueueUpdate);
+        queueChannel.bind('session-claimed', handleQueueUpdate);
+
 
         let sessionChannel;
         if (activeChat) {
-            sessionChannel = pusher.subscribe(`chat-session-${activeChat.session_id}`);
+            // ✅ PERBAIKAN: Gunakan nama channel yang konsisten dengan backend
+            const channelName = `chat-session-${activeChat.session_id}`;
+            sessionChannel = pusher.subscribe(channelName);
             
             const handleNewMessage = (newMessage) => {
                 setMessages(prev => [...prev, newMessage]);
             };
-            sessionChannel.bind('new-message', handleNewMessage);
+            sessionChannel.bind('new_message', handleNewMessage);
         }
 
         return () => {
-            queueChannel.unbind('queue-updated', handleQueueUpdate);
+            queueChannel.unbind_all();
             if (sessionChannel) {
-                pusher.unsubscribe(`chat-session-${activeChat.session_id}`);
+                pusher.unsubscribe(sessionChannel.name);
             }
+            // Jangan disconnect pusher di sini agar koneksi tetap terjaga
         };
     }, [queryClient, activeChat]);
 
     return {
-        agentStats: { active: 0, queue: queue.length, today: 0 },
         queue,
         isQueueLoading,
         activeChat,
