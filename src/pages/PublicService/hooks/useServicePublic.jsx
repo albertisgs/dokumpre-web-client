@@ -220,7 +220,10 @@ export const useServicePublicChat = () => {
 
     if (liveChatSessionId) {
       sessionChannel = pusher.subscribe(`chat-session-${liveChatSessionId}`);
-      sessionChannel.bind("new-message", (newMessage) => {
+
+      // --- PERBAIKAN DI SINI ---
+      // Nama event harus 'new_message' (dengan garis bawah), bukan 'new-message'
+      sessionChannel.bind("new_message", (newMessage) => {
         setMessages((prev) => [
           ...prev,
           {
@@ -240,6 +243,7 @@ export const useServicePublicChat = () => {
     userChannel.bind("agent-connected", (data) => {
       if (data.session_id === liveChatSessionId) {
         setChatMode("agent");
+        console.log("terhubung")
         toast.success("Agen telah terhubung!");
         setMessages((prev) => [
           ...prev,

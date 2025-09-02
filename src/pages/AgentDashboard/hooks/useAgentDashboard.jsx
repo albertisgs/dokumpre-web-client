@@ -104,19 +104,20 @@ const useAgentDashboard = () => {
         };
         queueChannel.bind('new-pending-session', handleQueueUpdate);
         queueChannel.bind('session-claimed', handleQueueUpdate);
-
-
-        let sessionChannel;
+       let sessionChannel;
         if (activeChat) {
             const channelName = `chat-session-${activeChat.session_id}`;
             sessionChannel = pusher.subscribe(channelName);
 
             const handleNewMessage = (newMessage) => {
-                // FIX: Tambahkan pesan baru ke state
                 setMessages(prev => [...prev, newMessage]);
             };
+            
+            // --- PERBAIKAN DI SINI ---
+            // Nama event juga harus 'new_message' (dengan garis bawah)
             sessionChannel.bind('new_message', handleNewMessage);
         }
+
 
         return () => {
             queueChannel.unbind_all();

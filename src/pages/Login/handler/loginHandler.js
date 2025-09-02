@@ -21,6 +21,7 @@ export const handleCredentialLogin = async (
       if (profile.data) {
         updateAuth(
           {
+            id: profile.data.id,
             email: profile.data.email,
             name: profile.data.username,
             picture: null,

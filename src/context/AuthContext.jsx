@@ -41,6 +41,7 @@ export const AuthProvider = ({ children }) => {
       const profile = await axiosInstance.generalSession.get("api/auth/me");
       if (profile.data) {
           const freshUser = {
+            id: profile.data.id,
             email: profile.data.email,
             name: profile.data.username,
             picture: profile.data.photo_url,

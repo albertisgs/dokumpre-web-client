@@ -21,6 +21,7 @@ export const useOAuthCallback = (status) => {
         if (profile.data) {
           updateAuth(
             {
+              id: profile.data.id,
               email: profile.data.email,
               name: profile.data.username,
               picture: profile.data.photo_url || null, // Handle jika picture tidak ada
