@@ -10,6 +10,7 @@ const UserManagement = lazy(()=>import('../pages/UserManagament/usermanagement')
 const TeamManagementPage = lazy(()=>import('../pages/TeamManagement/TeamManagement'))
 const RoleManagementPage = lazy(()=>import('../pages/RoleManagement/RoleManagement'))
 const ServicePublicPage = lazy(()=>import('../pages/PublicService/ServicePublicChat'))
+const AgentDashboardPage = lazy(() => import('../pages/AgentDashboard/AgentDashboard'));
 export const menu = [
   {
     title: 'Dashboard',
@@ -85,6 +86,13 @@ export const menu = [
     identifier: 'role-management',
     icon: '/shield.svg', // Ganti dengan ikon yang sesuai
     component: RoleManagementPage,
+  },
+  {
+    title: 'Agent Dashboard',
+    path: '/agent-dashboard',
+    identifier: 'agent-dashboard', // Ini harus cocok dengan nama permission
+    icon: '/user.svg', // Ganti dengan ikon yang sesuai
+    component: AgentDashboardPage,
   },
    
 ];

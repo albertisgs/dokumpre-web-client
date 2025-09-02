@@ -105,7 +105,7 @@ const AppContent = () => {
       toast.success(data.message);
       queryClient.invalidateQueries({ queryKey: ["syncPromptData"] });
     });
-    console.log(user.email);
+    
 
     // --- LISTENER BARU UNTUK NOTIFIKASI PRIBADI ---
     if (user && user.email) {
@@ -141,6 +141,13 @@ const AppContent = () => {
       });
     }
 
+    const userChatChannelName = `user-chat-${user.id}`;
+    const userChatChannel = pusher.subscribe(userChatChannelName);
+    userChatChannel.bind('agent-connected', (data) => {
+        // Cukup tampilkan notifikasi toast. Komponen chat akan menangani sisanya.
+        toast.success(`Agen terhubung ke sesi chat Anda!`);
+    });
+
 
 
     // Cleanup semua channel saat komponen unmount
@@ -148,6 +155,7 @@ const AppContent = () => {
       pusher.unsubscribe("Scrapping-notification");
       pusher.unsubscribe("team-updates");
       pusher.unsubscribe('legal-documents');
+      pusher.unsubscribe(userChatChannelName);
       pusher.unsubscribe(userChannelName);
       pusher.unsubscribe(teamPermissionsChannelName);
       pusher.unsubscribe(rolePermissionsChannelName);

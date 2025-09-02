@@ -21,9 +21,8 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   const isEditMode = !!role;
 
   // --- STATE BARU UNTUK TAB ---
-  const [activeTab, setActiveTab] = useState("crud"); // 'crud' or 'special'
+  const [activeTab, setActiveTab] = useState("crud"); // 'crud', 'special', or 'agent'
 
-  // `formData.id_team` akan menjadi pemicu untuk hook ini
   const { data: availablePermissions, isLoading: permissionsLoading } =
     useGetFilteredPermissions(formData.id_team);
   const { data: allTeams, isLoading: teamsLoading } = useGetTeams();
@@ -54,7 +53,6 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   const mutation = useMutation({
     mutationFn: (payload) => {
       if (isEditMode) {
-        // Logika EDIT tetap sama
         return axiosInstance.generalSession.put(
           `/api/roles-management/${role.id}`,
           {
@@ -64,7 +62,6 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
           }
         );
       } else {
-        // LOGIKA CREATE YANG BARU: Kirim semua data sekaligus
         return axiosInstance.generalSession.post("/api/roles-management/", {
           name: payload.name,
           description: payload.description,
@@ -109,11 +106,16 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
   const crudPermissions = availablePermissions?.filter((p) =>
     ["create", "read", "update", "delete"].some((keyword) =>
       p.name.includes(keyword)
-    )
+    ) && !p.name.includes("agent") // Tambahan: jangan masukkan agent di sini
   );
   const specialPermissions = availablePermissions?.filter((p) =>
     ["manager", "master"].some((keyword) => p.name.includes(keyword))
   );
+  // --- FILTER BARU UNTUK AGENT ---
+  const agentPermissions = availablePermissions?.filter((p) =>
+    p.name.includes("agent-dashboard")
+  );
+
 
   if (!isOpen) return null;
 
@@ -158,7 +160,6 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
             </div>
           )}
 
-          {/* Form fields untuk Name, Description, dan Team (tidak berubah) */}
           <div className="mb-4">
             <label
               htmlFor="name"
@@ -195,12 +196,10 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
             ></textarea>
           </div>
 
-          {/* --- BAGIAN PERMISSIONS DENGAN TAB --- */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700">
               Permissions
             </label>
-            {/* Tab Buttons */}
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                 <button
@@ -225,10 +224,21 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
                 >
                   Manager & Master
                 </button>
+                 {/* --- TOMBOL TAB BARU --- */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("agent")}
+                  className={`${
+                    activeTab === "agent"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Agent
+                </button>
               </nav>
             </div>
 
-            {/* Tab Content */}
             <div className="mt-2 border p-3 rounded-b-md max-h-48 overflow-y-auto">
                {!formData.id_team && (
                 <p className="text-center text-gray-500">Please select a team to see available permissions.</p>
@@ -237,10 +247,12 @@ const RoleManagementModal = ({ isOpen, onClose, role, onSuccess }) => {
                 <p>Loading permissions...</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {/* Tampilkan konten berdasarkan tab yang aktif */}
+                  {/* --- LOGIKA RENDER KONTEN TAB BARU --- */}
                   {(activeTab === "crud"
                     ? crudPermissions
-                    : specialPermissions
+                    : activeTab === "special"
+                    ? specialPermissions
+                    : agentPermissions
                   )?.map((p) => (
                     <label
                       key={p.id}
