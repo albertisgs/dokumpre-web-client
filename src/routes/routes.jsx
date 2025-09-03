@@ -24,16 +24,9 @@ export const createRouterForUser = (userMenu) => {
         ...finalFilteredRoutes,
         // Tambahkan rute baru yang lebih spesifik di sini
         {
-          path: "/agent-dashboard", // Halaman default
-          element: <AgentDashboard/>,
-        },
-        {
-          path: "/agent-dashboard/history", // Halaman riwayat
-          element: <AgentDashboard view="history" />,
-        },
-        {
-          path: "/agent-dashboard/:sessionId", // Halaman chat spesifik
-          element: <AgentDashboard view="live" />,
+          // sessionId dibuat opsional dengan tanda "?"
+          path: "/agent-dashboard/:sessionId?",
+          element: <AgentDashboard />,
         },
       ],
     },

@@ -1,15 +1,12 @@
-// src/pages/AgentDashboard/AgentDashboard.jsx (Final & Updated)
-import React, { useEffect, useRef, useState } from 'react';
+// src/pages/AgentDashboard/AgentDashboard.jsx
+
+import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-
-
-import { Loader2, Send, PhoneOff } from 'lucide-react';
+import { Loader2, Send, PhoneOff, Inbox } from 'lucide-react';
 import { useAuth } from '../../context/hooks/useAuth';
 import { useAgentStore } from '../../layouts/store/useAgentStore';
-import ChatHistoryView from './components/ChatHistoryView';
 
 
-// --- Sub-Komponen: Pesan Individual ---
 const ChatMessage = ({ msg, agent, user }) => {
     const isAgent = msg.sender_type === 'agent';
     const isSystem = msg.sender_type === 'system' || msg.sender_type === 'bot';
@@ -37,50 +34,54 @@ const ChatMessage = ({ msg, agent, user }) => {
     );
 };
 
+const TranscriptViewer = () => {
+    const { selectedHistoryTranscript: session, isTranscriptLoading } = useAgentStore();
 
-// --- Sub-Komponen: Jendela Chat Aktif ---
-const LiveChatWindow = ({ sessionId }) => {
+    if (isTranscriptLoading) return <div className="flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
+    if (!session) return null;
+
+    return (
+        <div className="flex flex-col h-full bg-white m-4 rounded-lg shadow-sm border">
+            <div className="p-4 border-b">
+                <h3 className="font-bold">Transkrip dengan: {session.user_name || 'User'}</h3>
+                <p className="text-xs text-gray-500">Selesai pada: {new Date(session.ended_at).toLocaleString('id-ID')}</p>
+            </div>
+            <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+                <pre className="text-sm whitespace-pre-wrap font-sans">{session.transcript}</pre>
+            </div>
+        </div>
+    );
+};
+
+const LiveChatWindow = () => {
     const { authState } = useAuth();
-    const { activeChat, endSession } = useAgentStore();
-    const [messages, setMessages] = useState([]); // State lokal untuk pesan
+    const { activeChat, endSession, sendMessage } = useAgentStore();
     const [messageInput, setMessageInput] = useState('');
-    // Anda bisa menambahkan state loading/sending di sini jika diperlukan
     const messagesEndRef = useRef(null);
 
-    // TODO: Hubungkan ini dengan state global atau Pusher untuk real-time update
-    // Untuk sekarang, kita asumsikan `activeChat` dari store sudah berisi messages.
-    useEffect(() => {
-        if (activeChat && activeChat.id === sessionId) {
-            const allMessages = [...(activeChat.history || []), ...(activeChat.messages || [])];
-            allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            setMessages(allMessages);
-        }
-    }, [activeChat, sessionId]);
-    
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
+    }, [activeChat?.allMessages]);
 
     const handleSendMessage = (e) => {
         e.preventDefault();
-        if (!messageInput.trim()) return;
-        // TODO: Panggil action `sendMessage` dari store
-        console.log("Mengirim:", messageInput);
+        if (!messageInput.trim() || !activeChat) return;
+        sendMessage(activeChat.id, messageInput, authState.user.id);
         setMessageInput('');
     };
     
     const handleResolveChat = () => {
         if (window.confirm("Apakah Anda yakin ingin menyelesaikan sesi ini?")) {
-            endSession(sessionId);
+            endSession(activeChat.id);
         }
     };
 
-    if (!activeChat || activeChat.id !== sessionId) {
+    if (!activeChat) {
         return (
-            <div className="flex justify-center items-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                <p className="ml-4 text-gray-600">Memuat sesi...</p>
+             <div className="flex flex-col justify-center items-center h-full text-gray-500 p-8 text-center">
+                <PhoneOff className="w-16 h-16 text-gray-300 mb-4"/>
+                <h3 className="text-xl font-semibold text-gray-700">Tidak Ada Sesi Aktif</h3>
+                <p className="text-gray-600 mt-2">Pilih percakapan dari antrian untuk memulai.</p>
             </div>
         );
     }
@@ -89,16 +90,13 @@ const LiveChatWindow = ({ sessionId }) => {
         <div className="flex flex-col h-full bg-gray-50 m-4 rounded-lg shadow-sm border">
             <div className="p-4 border-b flex justify-between items-center bg-white rounded-t-lg">
                 <h3 className="font-bold">{activeChat.user_name}</h3>
-                <button 
-                    onClick={handleResolveChat} 
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-green-700 disabled:bg-gray-400"
-                >
+                <button onClick={handleResolveChat} className="bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-green-700">
                     Selesaikan Sesi
                 </button>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto">
-                {messages.map((msg, index) => (
+                {activeChat.allMessages?.map((msg, index) => (
                     <ChatMessage key={msg.id || `msg-${index}`} msg={msg} agent={authState.user} user={{ name: activeChat.user_name }} />
                 ))}
                 <div ref={messagesEndRef} />
@@ -119,30 +117,29 @@ const LiveChatWindow = ({ sessionId }) => {
             </form>
         </div>
     );
-}
+};
 
-// --- Komponen Halaman Utama ---
-const AgentDashboard = ({ view }) => {
+const AgentDashboard = () => {
     const { sessionId } = useParams();
-
-    // Tampilan Riwayat
-    if (view === 'history') {
-        return <ChatHistoryView />;
-    }
+    const { activeChat, selectedHistoryTranscript, isInitialized } = useAgentStore();
     
-    // Tampilan Chat Aktif berdasarkan URL
-    if (view === 'live' && sessionId) {
-        return <LiveChatWindow sessionId={sessionId} />;
+    if (!isInitialized) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
     }
 
-    // Tampilan Default (halaman /agent-dashboard tanpa sessionId)
+    if (sessionId && activeChat && activeChat.id === sessionId) {
+        return <LiveChatWindow />;
+    }
+
+    if (selectedHistoryTranscript) {
+        return <TranscriptViewer />;
+    }
+
     return (
         <div className="flex flex-col justify-center items-center h-full text-gray-500 p-8 text-center">
-            <PhoneOff className="w-16 h-16 text-gray-300 mb-4"/>
+            <Inbox className="w-16 h-16 text-gray-300 mb-4"/>
             <h3 className="text-xl font-semibold text-gray-700">Selamat Datang di Dashboard Agen</h3>
-            <p className="text-gray-600 mt-2">
-                Pilih percakapan dari antrian atau sesi aktif di sidebar untuk memulai.
-            </p>
+            <p className="text-gray-600 mt-2">Pilih percakapan dari antrian atau riwayat di sidebar untuk memulai.</p>
         </div>
     );
 };
