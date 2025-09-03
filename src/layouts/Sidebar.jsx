@@ -1,16 +1,76 @@
 import { useState, useEffect, useMemo } from "react";
-
-import { Link, useLocation } from "react-router-dom";
-
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { menu } from "../configs/menu";
 import { useAuth } from "../context/hooks/useAuth";
+import { useAgentStore } from "./store/useAgentStore";
+import { Clock, MessageSquare } from "lucide-react";
+import AgentSidebarSection from "./components/AgentSidebarSection";
+
+const ChatListItem = ({ chat, isActive, onClick }) => (
+  <div
+    onClick={onClick}
+    className={`px-5 py-4 border-b border-gray-100 cursor-pointer transition-all duration-200 relative ${
+      isActive ? "bg-blue-50 border-l-4 border-l-blue-500" : "hover:bg-gray-50"
+    }`}
+  >
+    <div className="flex justify-between items-center mb-1">
+      <div className="font-semibold text-sm text-gray-800 truncate">
+        {chat.user_name}
+      </div>
+      <div className="text-xs text-gray-500">
+        {new Date(chat.created_at || chat.claimed_at).toLocaleTimeString(
+          "id-ID",
+          { hour: "2-digit", minute: "2-digit" }
+        )}
+      </div>
+    </div>
+    <div className="text-xs text-gray-600 line-clamp-2">
+      {isActive ? "Percakapan sedang berlangsung..." : "Menunggu di antrian..."}
+    </div>
+  </div>
+);
 
 const Sidebar = () => {
   const [currentPath, setCurrentPath] = useState("");
-
   const location = useLocation();
-
+  const navigate = useNavigate();
   const { authState, isSuperAdmin } = useAuth();
+  // Mengambil state dan actions dari Zustand store
+  const { queue, activeChat, initialize, claimChat, managePresence } = useAgentStore();
+
+  const showAgentSection = useMemo(() => {
+    return authState.user?.permissions?.includes("agent-dashboard:access");
+  }, [authState.user]);
+
+  // Inisialisasi data agen saat komponen dimuat jika ada izin
+  useEffect(() => {
+    if (showAgentSection) {
+            initialize();
+            const cleanupPresence = managePresence(); // Panggil action dan simpan fungsi cleanup-nya
+
+            // Return fungsi cleanup agar listener dihapus saat user logout / kehilangan akses
+            return () => {
+                if (cleanupPresence) {
+                    cleanupPresence();
+                }
+            };
+        }
+    }, [showAgentSection, initialize, managePresence]);
+
+  const handleChatSelect = async (sessionId) => {
+    // Jika chat yang dipilih belum aktif, klaim dulu
+    if (activeChat?.id !== sessionId) {
+      try {
+        await claimChat(sessionId);
+        navigate(`/agent-dashboard/${sessionId}`);
+      } catch (error) {
+        // error sudah ditangani di store
+      }
+    } else {
+      // Jika sudah aktif, cukup navigasi
+      navigate(`/agent-dashboard/${sessionId}`);
+    }
+  };
 
   useEffect(() => {
     setCurrentPath(location.pathname);
@@ -26,12 +86,12 @@ const Sidebar = () => {
 
     // Filter menu berdasarkan hak akses dari backend
 
-   return menu.filter((item) => {
+    return menu.filter((item) => {
       // Jika user adalah Superadmin, tampilkan semua
       if (userIsSuperAdmin) {
         return true;
       }
-      
+
       // Logika baru untuk menu yang butuh permission khusus
       if (item.identifier === "user-management") {
         return userPermissions.includes("user-management:master");
@@ -83,6 +143,87 @@ const Sidebar = () => {
           </Link>
         ))}
       </div>
+
+      {showAgentSection && (
+        <div className="flex flex-col min-h-0">
+          {/* Agent Status Section */}
+          <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 hidden md:block">
+            <div className="flex items-center mb-3">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm mr-2">
+                {authState.user?.name?.charAt(0).toUpperCase() || "A"}
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-sm text-gray-700">
+                  {authState.user?.name}
+                </div>
+                <div className="text-xs text-gray-500">Support Agent</div>
+              </div>
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            </div>
+            <div className="flex justify-around mt-2">
+              <div className="text-center">
+                <span className="block font-semibold text-base text-gray-700">
+                  {activeChat ? 1 : 0}
+                </span>
+                <span className="text-xs text-gray-500">Aktif</span>
+              </div>
+              <div className="text-center">
+                <span className="block font-semibold text-base text-gray-700">
+                  {queue.length}
+                </span>
+                <span className="text-xs text-gray-500">Antrian</span>
+              </div>
+              <div
+                className="text-center cursor-pointer"
+                onClick={() => navigate("/agent-dashboard/history")}
+              >
+                <span className="block font-semibold text-base text-gray-700">
+                  -
+                </span>
+                <span className="text-xs text-gray-500">Riwayat</span>
+              </div>
+            </div>
+          </div>
+
+          <AgentSidebarSection/>
+
+          {/* Chat Lists */}
+          <div className="flex-1 overflow-y-auto hidden md:block">
+            {/* Sesi Aktif */}
+            {activeChat && (
+              <>
+                <div className="px-5 py-2 bg-gray-100 border-b border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
+                  <MessageSquare className="w-4 h-4 mr-2" /> Sesi Aktif
+                </div>
+                <ChatListItem
+                  chat={activeChat}
+                  isActive={true}
+                  onClick={() => navigate(`/agent-dashboard/${activeChat.id}`)}
+                />
+              </>
+            )}
+
+            {/* Antrian */}
+            <div className="px-5 py-2 bg-gray-100 border-y border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
+              <Clock className="w-4 h-4 mr-2" /> Antrian Chat ({queue.length})
+            </div>
+            {queue.length > 0 ? (
+              queue.map((chat) => (
+                <ChatListItem
+                  key={chat.session_id}
+                  chat={chat}
+                  isActive={false}
+                  onClick={() => handleChatSelect(chat.session_id)}
+                />
+              ))
+            ) : (
+              <p className="p-4 text-center text-xs text-gray-400">
+                Tidak ada antrian.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

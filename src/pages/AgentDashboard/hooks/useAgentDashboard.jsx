@@ -1,12 +1,13 @@
-// src/pages/AgentDashboard/hooks/useAgentDashboard.jsx (Lengkap dan Final)
-import { useState, useEffect, useCallback } from 'react';
+// src/pages/AgentDashboard/hooks/useAgentDashboard.jsx (Updated)
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Pusher from 'pusher-js';
 import axiosInstance from '../../../axios/axiosInstance';
 import { useAuth } from '../../../context/hooks/useAuth';
 import toast from 'react-hot-toast';
 
-// --- Kumpulan Fungsi API ---
+
+// --- API Functions ---
 const fetchQueue = async () => {
     const { data } = await axiosInstance.generalSession.get('/api/live-chat/agent/queue');
     return data;
@@ -32,11 +33,6 @@ const updateAgentStatus = async (status) => {
     return data;
 };
 
-const transferChat = async ({ sessionId, toAgentId }) => {
-    const { data } = await axiosInstance.generalSession.post(`/api/live-chat/agent/sessions/${sessionId}/transfer`, { to_agent_id: toAgentId });
-    return data;
-};
-
 const fetchMyActiveSession = async () => {
     const { data } = await axiosInstance.generalSession.get('/api/live-chat/agent/my-session');
     return data;
@@ -45,12 +41,18 @@ const fetchMyActiveSession = async () => {
 const useAgentDashboard = () => {
     const queryClient = useQueryClient();
     const { authState } = useAuth();
-    const [activeChat, setActiveChat] = useState(null);
+    
+    // State untuk sesi yang sedang aktif (hanya satu)
+    const [activeChat, setActiveChat] = useState(null); 
+    // State untuk pesan dari sesi yang aktif
     const [messages, setMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
+    // **[LOGIKA STATUS]** State untuk status agen, default 'offline'
     const [agentStatus, setAgentStatus] = useState('offline');
+    // **[LOGIKA STATUS]** Ref untuk mencegah panggilan ganda saat tab berubah
+    const statusRef = useRef(agentStatus);
 
-    // Query untuk mengambil sesi aktif saat komponen dimuat
+    // **[LOGIKA PERSISTENSI]** Query untuk mengambil sesi aktif saat reload halaman
     const { isLoading: isRestoringSession } = useQuery({
         queryKey: ['myActiveSession'],
         queryFn: fetchMyActiveSession,
@@ -59,112 +61,131 @@ const useAgentDashboard = () => {
         onSuccess: (data) => {
             if (data) {
                 const userName = data.user_name || 'Customer';
+                // Langsung set sesi yang aktif dari server
                 setActiveChat({ session_id: data.id, user_name: userName });
 
-                // --- PERBAIKAN UTAMA DI SINI ---
-                // 1. Ambil kedua array dari data
+                // Gabungkan riwayat dan pesan yang sudah ada
                 const historyMessages = data.history || [];
                 const liveMessages = data.messages || [];
-
-                // 2. Gabungkan kedua array menjadi satu
                 const allMessages = [...historyMessages, ...liveMessages];
-                
-                // 3. Urutkan berdasarkan timestamp untuk memastikan urutan kronologis
                 allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 
-                // 4. Set state dengan data yang sudah digabung dan diurutkan
                 setMessages(allMessages);
-
                 toast.success(`Sesi dengan ${userName} dipulihkan.`);
             }
         }
     });
 
+    // Query untuk mengambil data antrian (status 'queued')
     const { data: queue = [], isLoading: isQueueLoading } = useQuery({
         queryKey: ['chatQueue'],
         queryFn: fetchQueue,
     });
 
-      const { mutate: claimChat, isPending: isClaiming } = useMutation({
+    // Mutasi untuk mengklaim chat
+    const { mutate: claimChat, isPending: isClaiming } = useMutation({
         mutationFn: claimChatSession,
         onSuccess: (data) => {
-            // --- PERBAIKAN UTAMA DI SINI ---
-            // 1. Ambil nama user langsung dari respons API, bukan dari state 'queue'
             const userName = data.user_name || 'Customer';
-
-            // 2. Atur activeChat dengan data yang pasti benar
+            // **[FOKUS UTAMA]** Saat berhasil klaim, set sesi ini sebagai sesi aktif
             setActiveChat({ session_id: data.id, user_name: userName });
             
-            // 3. Gabungkan dan urutkan riwayat & pesan
+            // Gabungkan riwayat dari Dify dengan pesan live chat (jika ada)
             const historyMessages = data.history.map((h, index) => ({ ...h, id: `history-${index}-${new Date(h.timestamp).getTime()}`}));
             const allMessages = [...historyMessages, ...data.messages].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             setMessages(allMessages);
             
-            // 4. Invalidate query antrian SETELAH semua state diatur
+            // Invalidate query antrian agar item yang diklaim hilang dari daftar antrian
             queryClient.invalidateQueries({ queryKey: ['chatQueue'] });
-
             toast.success(`Anda terhubung dengan ${userName}`);
         },
         onError: (error) => toast.error(error.response?.data?.detail || "Gagal mengklaim chat.")
     });
 
-
+    // Mutasi untuk mengirim pesan
     const { mutate: sendMessage, isPending: isSendingMessage } = useMutation({
         mutationFn: postAgentMessage,
         onSuccess: () => setMessageInput(''),
         onError: (error) => toast.error(error.response?.data?.detail || "Gagal mengirim pesan.")
     });
 
+    // Mutasi untuk menyelesaikan sesi
     const { mutate: endSession, isPending: isEndingSession } = useMutation({
         mutationFn: endChatSession,
         onSuccess: (data) => {
             toast.success(data.message || 'Sesi chat telah ditutup.');
+            // **[FOKUS UTAMA]** Kosongkan sesi aktif setelah selesai
             setActiveChat(null);
             setMessages([]);
-            queryClient.invalidateQueries({ queryKey: ['chatQueue'] });
+            queryClient.invalidateQueries({ queryKey: ['myActiveSession'] }); // Invalidate sesi aktif juga
         },
         onError: (error) => toast.error(error.response?.data?.detail || "Gagal menutup sesi.")
     });
-    
+
+    // **[LOGIKA STATUS]** Mutasi untuk mengubah status
     const { mutate: changeStatus } = useMutation({
         mutationFn: updateAgentStatus,
         onSuccess: (data) => {
-            setAgentStatus(data.new_status);
-            toast.success(`Status Anda sekarang: ${data.new_status}`);
+            const newStatus = data.new_status;
+            setAgentStatus(newStatus);
+            statusRef.current = newStatus; // Update ref juga
+            // Hanya tampilkan notifikasi jika perubahan status bukan 'offline'
+            if (newStatus !== 'offline') {
+                toast.success(`Status Anda sekarang: ${newStatus}`, { duration: 2000 });
+            }
         },
         onError: (error) => toast.error(error.response?.data?.detail || "Gagal mengubah status."),
     });
 
-    const { mutate: transferSession, isPending: isTransferring } = useMutation({
-        mutationFn: transferChat,
-        onSuccess: (data) => {
-            toast.success(data.message);
-            setActiveChat(null);
-            setMessages([]);
-        },
-        onError: (error) => toast.error(error.response?.data?.detail || "Gagal mentransfer sesi.")
-    });
-
-    const handleSetOnline = useCallback(() => changeStatus('online'), [changeStatus]);
-    const handleSetOffline = useCallback(() => changeStatus('offline'), [changeStatus]);
-
+    // **[LOGIKA STATUS]** Hook untuk menangani visibilitas tab
     useEffect(() => {
-        handleSetOnline();
-        const handleBeforeUnload = () => {
-             if (navigator.sendBeacon) {
-                const blob = new Blob([JSON.stringify({ status: 'offline' })], { type: 'application/json' });
-                navigator.sendBeacon('/api/live-chat/agent/status', blob);
+        const handleVisibilityChange = () => {
+            // Jika tab disembunyikan dan status saat ini 'online', ubah jadi 'away'
+            if (document.hidden && statusRef.current === 'online') {
+                changeStatus('away');
+            } 
+            // Jika tab ditampilkan kembali dan status saat ini 'away', ubah jadi 'online'
+            else if (!document.hidden && statusRef.current === 'away') {
+                changeStatus('online');
             }
         };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            handleSetOffline();
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [handleSetOnline, handleSetOffline]);
 
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [changeStatus]); // Dependency hanya 'changeStatus'
+
+    // **[LOGIKA STATUS]** Hook untuk menangani saat agen membuka dan menutup dashboard
+    useEffect(() => {
+        // Saat komponen dimuat, set status menjadi 'online'
+        changeStatus('online');
+
+        // Fungsi yang akan dijalankan saat agen menutup tab/browser
+        const handleBeforeUnload = () => {
+            // Menggunakan navigator.sendBeacon untuk pengiriman data yang andal saat halaman ditutup
+            if (navigator.sendBeacon) {
+                const blob = new Blob([JSON.stringify({ status: 'offline' })], { type: 'application/json' });
+                // URL harus lengkap jika API Anda di domain berbeda
+                const url = `${import.meta.env.VITE_API_URL_GENERAL}/api/live-chat/agent/status`;
+                navigator.sendBeacon(url, blob);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        // Saat komponen dibongkar (unmount), panggil fungsi cleanup
+        return () => {
+            // Hapus listener untuk mencegah memory leak
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            // Set status ke offline secara eksplisit jika pengguna logout secara normal
+            changeStatus('offline');
+        };
+    }, [changeStatus]); // Jalankan hanya sekali saat komponen dimuat
 
     useEffect(() => {
+        // Logika Pusher tidak perlu diubah, sudah bagus
         const pusherKey = import.meta.env.VITE_PUSHER_KEY;
         const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
         if (!pusherKey || !pusherCluster) return;
@@ -187,39 +208,26 @@ const useAgentDashboard = () => {
                  setMessages(prev => [...prev, newMessage]);
             });
         }
-        
-        const agentChannelName = `agent-${authState.user?.id}`;
-        const agentChannel = pusher.subscribe(agentChannelName);
-        
-        agentChannel.bind('session-transferred-to-you', (data) => {
-            toast.success("Anda menerima sesi transfer. Klaim dari antrian.");
-            queryClient.invalidateQueries({ queryKey: ['chatQueue'] });
-        });
-
-        agentChannel.bind('session-transferred-away', () => {
-            toast.info("Sesi Anda telah berhasil ditransfer.");
-            setActiveChat(null);
-            setMessages([]);
-        });
 
         return () => {
             pusher.unsubscribe('agent-dashboard');
-            pusher.unsubscribe(agentChannelName);
             if (sessionChannel) pusher.unsubscribe(sessionChannel.name);
         };
-    }, [queryClient, activeChat, authState.user?.id]);
+    }, [queryClient, activeChat]);
 
     return {
         queue, isQueueLoading,
-        activeChat, messages,
+        activeChat, setActiveChat,
+        messages, setMessages,
         claimChat, isClaiming,
         messageInput, setMessageInput,
         sendMessage, isSendingMessage,
         endSession, isEndingSession,
         agent: authState.user,
-        agentStatus, changeStatus,
-        transferSession, isTransferring,
         isRestoringSession,
+        // **[LOGIKA STATUS]** Ekspor status dan fungsi pengubahnya
+        agentStatus,
+        changeStatus,
     };
 };
 
