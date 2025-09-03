@@ -1,19 +1,58 @@
-// src/pages/PublicService/ServicePublicChat.jsx
+// src/pages/PublicService/ServicePublicChat.jsx (Diperbarui)
 import React, { useRef, useEffect } from 'react';
-import { Loader2, Send, UserCheck } from 'lucide-react';
+import { Loader2, Send, UserCheck, MessageSquarePlus, MessageSquareText } from 'lucide-react';
 
 import { useAuth } from '../../context/hooks/useAuth';
 import CitationModal from './components/CitationModal';
 import { useServicePublicChat } from './hooks/useServicePublic';
 
+// (BARU) Komponen untuk layar pemilihan sesi
+const SessionSelector = ({ sessions, onSelect, onCreate, isLoading, isRestoring }) => {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center bg-white m-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.1)] p-8">
+            {isLoading || isRestoring ? (
+                <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+            ) : (
+                <div className="text-center max-w-lg">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Selamat Datang Kembali!</h2>
+                    {sessions && sessions.length > 0 ? (
+                        <>
+                            <p className="text-gray-600 mb-6">Anda memiliki sesi yang sedang berlangsung. Lanjutkan percakapan Anda atau mulai yang baru.</p>
+                            <div className="space-y-4 mb-6">
+                                {sessions.map(session => (
+                                    <button key={session.id} onClick={() => onSelect(session)} className="w-full text-left p-4 border rounded-lg hover:bg-gray-50 flex items-center justify-between">
+                                        <div>
+                                            <p className="font-semibold">Lanjutkan Sesi dengan {session.agent_name || 'Bot'}</p>
+                                            <p className="text-xs text-gray-500">Dimulai pada: {new Date(session.created_at).toLocaleString('id-ID')}</p>
+                                        </div>
+                                        <MessageSquareText className="w-5 h-5 text-blue-500"/>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="text-center text-gray-500 my-4">atau</div>
+                        </>
+                    ) : (
+                        <p className="text-gray-600 mb-6">Mulai percakapan baru dengan AI Assistant kami.</p>
+                    )}
+                    <button onClick={onCreate} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center">
+                        <MessageSquarePlus className="w-5 h-5 mr-2"/>
+                        Buat Sesi Baru
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 const ServicePublicChat = () => {
   const {
-    messages, input, setInput, chatMode, isBotLoading,
-    showAgentTrigger, isRequestingAgent, requestAgent,
-    handleSendMessage, isSendingToAgent,
-    citations, openCitations, selectedCitation,
-    toggleCitations, handleOpenModal, handleCloseModal,
-    difyConversationId // <-- Ambil difyConversationId di sini
+    messages, input, setInput, chatMode, isBotLoading, showAgentTrigger,
+    isRequestingAgent, requestAgent, handleSendMessage, isSendingToAgent,
+    citations, openCitations, selectedCitation, toggleCitations,
+    handleOpenModal, handleCloseModal, difyConversationId,
+    // (BARU) Ambil state & handler sesi
+    isSessionView, activeSessions, isLoadingSessions, handleSelectSession, handleCreateNewSession, isRestoringSession
   } = useServicePublicChat();
 
   const { authState } = useAuth();
@@ -34,16 +73,29 @@ const ServicePublicChat = () => {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
   };
 
-  // --- PERBAIKAN DI SINI ---
-  // Gunakan variabel difyConversationId yang sudah ada dari hook.
   const handleRequestAgent = () => {
     if (difyConversationId) {
         requestAgent(difyConversationId);
     }
   };
 
+  // --- (BARU) Render kondisional berdasarkan isSessionView ---
+  if (isSessionView) {
+      return (
+          <div className="flex-1 flex flex-col  mx-auto w-full h-full">
+              <SessionSelector 
+                  sessions={activeSessions}
+                  onSelect={handleSelectSession}
+                  onCreate={handleCreateNewSession}
+                  isLoading={isLoadingSessions}
+                  isRestoring={isRestoringSession}
+              />
+          </div>
+      );
+  }
+
   return (
-    <div className="flex-1 flex flex-col max-w-[1200px] mx-auto w-full h-full">
+    <div className="flex-1 flex flex-col mx-auto w-full h-full">
       <div className="flex-1 p-6 overflow-y-auto bg-white m-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
         {messages.map((msg) => {
           const messageCitations = citations.filter(c => c.messageId === msg.id);

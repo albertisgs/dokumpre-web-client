@@ -1,10 +1,26 @@
 // src/pages/PublicService/hooks/useServicePublicChat.js
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Pusher from "pusher-js";
 import toast from "react-hot-toast";
 import axiosInstance from "../../../axios/axiosInstance";
 import { useAuth } from "../../../context/hooks/useAuth";
+
+// --- Kumpulan Fungsi API ---
+const fetchUserSessions = async () => {
+  const { data } = await axiosInstance.generalSession.get(
+    "/api/live-chat/sessions"
+  );
+  return data;
+};
+
+const fetchSessionHistory = async (sessionId) => {
+  // Panggil endpoint BARU yang aman untuk pengguna
+  const { data } = await axiosInstance.generalSession.get(
+    `/api/live-chat/sessions/${sessionId}/history`
+  );
+  return data;
+};
 
 const requestChatWithAgent = async (difyConversationId) => {
   const { data } = await axiosInstance.generalSession.post(
@@ -18,42 +34,38 @@ const requestChatWithAgent = async (difyConversationId) => {
 
 const postUserMessageToAgent = async ({ sessionId, text }) => {
   const { data } = await axiosInstance.generalSession.post(
-    `/api/live-chat/${sessionId}/send-message`,
+    `/api/live-chat/sessions/${sessionId}/send-message`,
     { text }
   );
   return data;
 };
 
 export const useServicePublicChat = () => {
+  const queryClient = useQueryClient();
   const { authState } = useAuth();
+
+  // --- State Management ---
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [difyConversationId, setDifyConversationId] = useState(null);
-  const [liveChatSessionId, setLiveChatSessionId] = useState(null);
-  const [chatMode, setChatMode] = useState("bot"); // 'bot' or 'agent'
+  const [liveChatSessionId, setLiveChatSessionId] = useState(null); // Ini menjadi null di awal
+  const [chatMode, setChatMode] = useState("bot");
   const [isBotLoading, setIsBotLoading] = useState(false);
   const [showAgentTrigger, setShowAgentTrigger] = useState(false);
   const [citations, setCitations] = useState([]);
   const [openCitations, setOpenCitations] = useState({});
   const [selectedCitation, setSelectedCitation] = useState(null);
 
-  const toggleCitations = (messageId) => {
-    setOpenCitations((prev) => ({ ...prev, [messageId]: !prev[messageId] }));
-  };
-  const handleOpenModal = (citation) => setSelectedCitation(citation);
-  const handleCloseModal = () => setSelectedCitation(null);
+  // --- (BARU) State untuk mengelola sesi ---
+  const [isSessionView, setIsSessionView] = useState(true); // Tampilkan pilihan sesi di awal
+  const [isRestoringSession, setIsRestoringSession] = useState(false);
 
-  useEffect(() => {
-    setMessages([
-      {
-        id: "initial",
-        sender: "agent",
-        text: `Halo ${
-          authState.user?.name || "User"
-        }. Saya adalah AI Assistant dari Dokuprime. Ada yang bisa saya bantu?`,
-      },
-    ]);
-  }, [authState.user]);
+  // --- (BARU) Query untuk mengambil sesi aktif pengguna ---
+  const { data: activeSessions, isLoading: isLoadingSessions } = useQuery({
+    queryKey: ["userChatSessions"],
+    queryFn: fetchUserSessions,
+    enabled: !!authState.user, // Hanya jalankan jika user sudah login
+  });
 
   const { mutate: requestAgent, isPending: isRequestingAgent } = useMutation({
     mutationFn: requestChatWithAgent,
@@ -82,6 +94,53 @@ export const useServicePublicChat = () => {
       onError: (error) =>
         toast.error(error.response?.data?.detail || "Gagal mengirim pesan."),
     });
+
+  // (BARU) Fungsi untuk menangani saat user memilih sesi yang ada
+  const handleSelectSession = async (session) => {
+        setIsRestoringSession(true);
+        setLiveChatSessionId(session.id);
+        
+        if (session.status === 'active' || session.status === 'queued') {
+            try {
+                const historyData = await fetchSessionHistory(session.id);
+                
+                // --- PERBAIKAN UTAMA ADA DI SINI ---
+                // Kita akan memetakan semua pesan ke format yang konsisten (menggunakan 'text')
+                const allMessages = historyData.messages.map(msg => ({
+                    id: msg.id,
+                    sender: msg.sender_type, // Ubah sender_type menjadi sender
+                    text: msg.message_text,  // Ubah message_text menjadi text
+                    timestamp: msg.timestamp,
+                })).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                setMessages(allMessages);
+                setChatMode(historyData.status === 'active' ? 'agent' : 'bot');
+
+            } catch (error) {
+                toast.error("Gagal memuat riwayat chat.");
+                setLiveChatSessionId(null);
+            }
+        }
+        setIsSessionView(false);
+        setIsRestoringSession(false);
+    };
+
+  // (BARU) Fungsi untuk membuat sesi baru (mulai dengan bot)
+  const handleCreateNewSession = () => {
+    setMessages([
+      {
+        id: "initial",
+        sender: "agent",
+        text: `Halo ${
+          authState.user?.name || "User"
+        }. Saya adalah AI Assistant dari Dokuprime. Ada yang bisa saya bantu?`,
+      },
+    ]);
+    setLiveChatSessionId(null); // Pastikan ID sesi lama kosong
+    setDifyConversationId(null); // Mulai percakapan Dify baru
+    setChatMode("bot");
+    setIsSessionView(false);
+  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -210,83 +269,78 @@ export const useServicePublicChat = () => {
     }
   };
 
-  useEffect(() => {
+  const toggleCitations = (messageId) => {
+    setOpenCitations((prev) => ({ ...prev, [messageId]: !prev[messageId] }));
+  };
+  const handleOpenModal = (citation) => setSelectedCitation(citation);
+  const handleCloseModal = () => setSelectedCitation(null);
+
+   useEffect(() => {
     const pusherKey = import.meta.env.VITE_PUSHER_KEY;
     const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
     if (!pusherKey || !pusherCluster || !authState.user?.id) return;
 
     const pusher = new Pusher(pusherKey, { cluster: pusherCluster });
-    let sessionChannel;
-
-    if (liveChatSessionId) {
-      sessionChannel = pusher.subscribe(`chat-session-${liveChatSessionId}`);
-
-      // --- PERBAIKAN DI SINI ---
-      // Nama event harus 'new_message' (dengan garis bawah), bukan 'new-message'
-      sessionChannel.bind("new_message", (newMessage) => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: newMessage.id,
-            sender: newMessage.sender_type,
-            text: newMessage.message_text,
-            timestamp: newMessage.timestamp,
-          },
-        ]);
-      });
-    }
-
-    // FIX: Gunakan user_id dari authState untuk nama channel
     const userChannelName = `user-chat-${authState.user.id}`;
     const userChannel = pusher.subscribe(userChannelName);
 
     userChannel.bind("agent-connected", (data) => {
       if (data.session_id === liveChatSessionId) {
         setChatMode("agent");
-        console.log("terhubung")
-        toast.success("Agen telah terhubung!");
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `system-${Date.now()}`,
-            sender: "system",
-            text: `Agen ${data.agent_name} telah terhubung.`,
-          },
-        ]);
+        toast.success(`Agen ${data.agent_name} telah terhubung!`);
+        setMessages((prev) => [...prev, { id: `system-${Date.now()}`, sender: "system", text: `Anda sekarang terhubung dengan ${data.agent_name}.` }]);
       }
     });
 
-    // FIX: Dengarkan event 'session-resolved'
-    userChannel.bind("session-resolved", () => {
-      setChatMode("bot");
-      setLiveChatSessionId(null);
-      toast.success("Sesi chat dengan agen telah berakhir.");
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `system-${Date.now()}`,
-          sender: "system",
-          text: "Sesi chat berakhir. Anda kembali terhubung dengan bot.",
-        },
-      ]);
+    userChannel.bind("session-resolved", (data) => {
+        if (data.session_id === liveChatSessionId) {
+            setChatMode("bot");
+            setLiveChatSessionId(null);
+            toast.success("Sesi chat dengan agen telah berakhir.");
+            setIsSessionView(true);
+        }
     });
+    
+    userChannel.bind("agent-transferred", (data) => {
+        if (data.session_id === liveChatSessionId) {
+            toast.info("Percakapan Anda dialihkan ke agen lain.");
+            queryClient.invalidateQueries({ queryKey: ['userChatSessions'] });
+        }
+    });
+
+    let sessionChannel;
+    if (liveChatSessionId) {
+      const channelName = `chat-session-${liveChatSessionId}`;
+      sessionChannel = pusher.subscribe(channelName);
+      
+      sessionChannel.bind("new_message", (newMessage) => {
+        // --- PERBAIKAN UTAMA DI SINI ---
+        // Cek apakah pengirim pesan BUKAN user saat ini.
+        if (newMessage.sender_id !== authState.user.id) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: newMessage.id,
+              sender: newMessage.sender_type,
+              text: newMessage.message_text,
+              timestamp: newMessage.timestamp,
+            },
+          ]);
+        }
+      });
+    }
 
     return () => {
       pusher.unsubscribe(userChannelName);
-      if (liveChatSessionId)
-        pusher.unsubscribe(`chat-session-${liveChatSessionId}`);
+      if (sessionChannel) pusher.unsubscribe(sessionChannel.name);
     };
-  }, [liveChatSessionId, authState.user?.id]);
+  }, [liveChatSessionId, authState.user?.id, queryClient]); // Hapus chatMode dari dependency array
 
   return {
     messages,
-    setMessages,
     input,
     setInput,
-    difyConversationId,
-    liveChatSessionId,
     chatMode,
-    setChatMode,
     isBotLoading,
     showAgentTrigger,
     isRequestingAgent,
@@ -299,5 +353,13 @@ export const useServicePublicChat = () => {
     toggleCitations,
     handleOpenModal,
     handleCloseModal,
+    difyConversationId,
+    // (BARU) Ekspor state dan fungsi baru
+    isSessionView,
+    activeSessions,
+    isLoadingSessions,
+    handleSelectSession,
+    handleCreateNewSession,
+    isRestoringSession,
   };
 };
