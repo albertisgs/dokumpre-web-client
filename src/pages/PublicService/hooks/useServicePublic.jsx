@@ -1,5 +1,5 @@
 // src/pages/PublicService/hooks/useServicePublicChat.js
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Pusher from "pusher-js";
 import toast from "react-hot-toast";
@@ -7,6 +7,23 @@ import axiosInstance from "../../../axios/axiosInstance";
 import { useAuth } from "../../../context/hooks/useAuth";
 
 // --- Kumpulan Fungsi API ---
+
+const initiateChatSession = async (difyConversationId) => {
+  const { data } = await axiosInstance.generalSession.post(
+    "/api/live-chat/sessions/initiate",
+    { dify_conversation_id: difyConversationId }
+  );
+  return data;
+};
+
+const requestChatWithAgent = async (liveChatSessionId) => {
+  const { data } = await axiosInstance.generalSession.post(
+    "/api/live-chat/request-session",
+    { live_chat_session_id: liveChatSessionId }
+  );
+  return data;
+};
+
 const fetchUserSessions = async () => {
   const { data } = await axiosInstance.generalSession.get(
     "/api/live-chat/sessions"
@@ -18,16 +35,6 @@ const fetchSessionHistory = async (sessionId) => {
   // Panggil endpoint BARU yang aman untuk pengguna
   const { data } = await axiosInstance.generalSession.get(
     `/api/live-chat/sessions/${sessionId}/history`
-  );
-  return data;
-};
-
-const requestChatWithAgent = async (difyConversationId) => {
-  const { data } = await axiosInstance.generalSession.post(
-    "/api/live-chat/request-session",
-    {
-      dify_conversation_id: difyConversationId,
-    }
   );
   return data;
 };
@@ -59,12 +66,26 @@ export const useServicePublicChat = () => {
   // --- (BARU) State untuk mengelola sesi ---
   const [isSessionView, setIsSessionView] = useState(true); // Tampilkan pilihan sesi di awal
   const [isRestoringSession, setIsRestoringSession] = useState(false);
+  const initiationStarted = useRef(false);
 
   // --- (BARU) Query untuk mengambil sesi aktif pengguna ---
   const { data: activeSessions, isLoading: isLoadingSessions } = useQuery({
     queryKey: ["userChatSessions"],
     queryFn: fetchUserSessions,
     enabled: !!authState.user, // Hanya jalankan jika user sudah login
+  });
+
+  const { mutate: initiateSession } = useMutation({
+    mutationFn: initiateChatSession,
+    onSuccess: (data) => {
+      // Simpan ID sesi dari database aplikasi kita
+      setLiveChatSessionId(data.id);
+    },
+    onError: (error) => {
+      console.error("Gagal membuat sesi awal di DB:", error);
+      toast.error("Gagal memulai sesi, silakan coba lagi.");
+      initiationStarted.current = false;
+    },
   });
 
   const { mutate: requestAgent, isPending: isRequestingAgent } = useMutation({
@@ -97,35 +118,38 @@ export const useServicePublicChat = () => {
 
   // (BARU) Fungsi untuk menangani saat user memilih sesi yang ada
   const handleSelectSession = async (session) => {
-        setIsRestoringSession(true);
-        setLiveChatSessionId(session.id);
-        
-        if (session.status === 'active' || session.status === 'queued') {
-            try {
-                const historyData = await fetchSessionHistory(session.id);
-                
-                // --- PERBAIKAN UTAMA ADA DI SINI ---
-                // Kita akan memetakan semua pesan ke format yang konsisten (menggunakan 'text')
-                const allMessages = historyData.messages.map(msg => ({
-                    id: msg.id,
-                    sender: msg.sender_type, // Ubah sender_type menjadi sender
-                    text: msg.message_text,  // Ubah message_text menjadi text
-                    timestamp: msg.timestamp,
-                })).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-                
-                setMessages(allMessages);
-                setChatMode(historyData.status === 'active' ? 'agent' : 'bot');
+    setIsRestoringSession(true);
+    setLiveChatSessionId(session.id);
 
-            } catch (error) {
-                toast.error("Gagal memuat riwayat chat.");
-                setLiveChatSessionId(null);
-            }
-        }
-        setIsSessionView(false);
-        setIsRestoringSession(false);
-    };
+    if (session.status === "active" || session.status === "queued") {
+      try {
+        const historyData = await fetchSessionHistory(session.id);
+        // Simpan dify_conversation_id saat sesi dipulihkan
+        setDifyConversationId(historyData.dify_conversation_id);
 
-  // (BARU) Fungsi untuk membuat sesi baru (mulai dengan bot)
+        const allMessages = historyData.messages
+          .map((msg) => ({
+            id: msg.id,
+            sender: msg.sender_type,
+            text: msg.message_text,
+            timestamp: msg.timestamp,
+          }))
+          .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        setMessages(allMessages);
+        setChatMode(historyData.status === "active" ? "agent" : "bot");
+      } catch (error) {
+        toast.error("Gagal memuat riwayat chat.");
+        setLiveChatSessionId(null);
+      }
+    } else {
+      // Jika statusnya 'chatbot', kita hanya perlu memulai sesi baru
+      handleCreateNewSession();
+    }
+    setIsSessionView(false);
+    setIsRestoringSession(false);
+  };
+
   const handleCreateNewSession = () => {
     setMessages([
       {
@@ -136,10 +160,11 @@ export const useServicePublicChat = () => {
         }. Saya adalah AI Assistant dari Dokuprime. Ada yang bisa saya bantu?`,
       },
     ]);
-    setLiveChatSessionId(null); // Pastikan ID sesi lama kosong
-    setDifyConversationId(null); // Mulai percakapan Dify baru
+    setLiveChatSessionId(null);
+    setDifyConversationId(null);
     setChatMode("bot");
     setIsSessionView(false);
+    initiationStarted.current = false;
   };
 
   const handleSendMessage = async (e) => {
@@ -176,64 +201,110 @@ export const useServicePublicChat = () => {
           }
         );
 
+        
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullResponse = "";
         const botMessageId = `bot-${Date.now()}`;
         let isFirstChunk = true;
 
+        // --- PERBAIKAN UTAMA: Gunakan Buffer ---
+        let buffer = "";
+
         let readerDone = false;
         while (!readerDone) {
           const { value, done } = await reader.read();
           readerDone = done;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk
-            .split("\n")
-            .filter((line) => line.startsWith("data: "));
 
-          for (const line of lines) {
-            try {
-              const jsonStr = line.replace("data: ", "");
-              if (!jsonStr) continue;
-              const data = JSON.parse(jsonStr);
+          // 1. Tambahkan setiap potongan data baru ke dalam buffer
+          buffer += decoder.decode(value, { stream: true });
 
-              if (data.conversation_id)
-                setDifyConversationId(data.conversation_id);
+          // 2. Cari dan proses setiap pesan LENGKAP di dalam buffer
+          // Pesan SSE yang lengkap diakhiri dengan dua karakter newline (\n\n)
+          let endOfMessageIndex;
+          while ((endOfMessageIndex = buffer.indexOf("\n\n")) >= 0) {
+            // Ambil satu blok pesan lengkap dari buffer
+            const messageBlock = buffer.substring(0, endOfMessageIndex);
 
-              if (data.event === "message" || data.event === "agent_message") {
-                fullResponse += data.answer;
-                if (isFirstChunk) {
-                  setMessages((prev) => [
-                    ...prev,
-                    { id: botMessageId, sender: "agent", text: fullResponse },
-                  ]);
-                  isFirstChunk = false;
-                } else {
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === botMessageId
-                        ? { ...msg, text: fullResponse }
-                        : msg
-                    )
-                  );
+            // Hapus blok pesan yang sudah diproses dari buffer untuk iterasi berikutnya
+            buffer = buffer.substring(endOfMessageIndex + 2);
+
+            // Sekarang proses setiap baris di dalam blok pesan yang sudah pasti lengkap
+            const lines = messageBlock
+              .split("\n")
+              .filter((line) => line.startsWith("data: "));
+
+            for (const line of lines) {
+              try {
+                const jsonStr = line.replace("data: ", "").trim();
+                if (!jsonStr || jsonStr === "[DONE]") {
+                  continue;
                 }
-              }
 
-              if (
-                data.event === "message_end" &&
-                data.metadata?.retriever_resources
-              ) {
-                const newCitations = data.metadata.retriever_resources.map(
-                  (resource) => ({
-                    messageId: botMessageId,
-                    documentName: resource.document_name,
-                    content: resource.content,
-                  })
-                );
-                setCitations((prev) => [...prev, ...newCitations]);
+                const data = JSON.parse(jsonStr);
+
+                // ==========================================================
+                // SEMUA LOGIKA LAMA ANDA PINDAHKAN KE SINI
+                // ==========================================================
+               if (data.conversation_id && !liveChatSessionId && !initiationStarted.current) {
+                   // 1. Set penanda bahwa proses inisiasi SUDAH DIMULAI
+                  initiationStarted.current = true; 
+                  
+                  // 2. Simpan ID Dify
+                  setDifyConversationId(data.conversation_id);
+                  
+                  // 3. Panggil mutasi untuk membuat sesi di database kita
+                  initiateSession(data.conversation_id);
+                }
+
+
+                if (
+                  data.event === "message" ||
+                  data.event === "agent_message"
+                ) {
+                  fullResponse += data.answer;
+                  if (isFirstChunk) {
+                    setMessages((prev) => [
+                      ...prev,
+                      { id: botMessageId, sender: "agent", text: fullResponse },
+                    ]);
+                    isFirstChunk = false;
+                  } else {
+                    setMessages((prev) =>
+                      prev.map((msg) =>
+                        msg.id === botMessageId
+                          ? { ...msg, text: fullResponse }
+                          : msg
+                      )
+                    );
+                  }
+                }
+
+                if (
+                  data.event === "message_end" &&
+                  data.metadata?.retriever_resources
+                ) {
+                  console.log(
+                    "SUCCESS: message_end diterima dan diproses!",
+                    data.metadata
+                  );
+                  const newCitations = data.metadata.retriever_resources.map(
+                    (resource) => ({
+                      messageId: botMessageId,
+                      documentName: resource.document_name,
+                      content: resource.content,
+                    })
+                  );
+                  setCitations((prev) => [...prev, ...newCitations]);
+                }
+                // ==========================================================
+                // AKHIR DARI LOGIKA LAMA
+                // ==========================================================
+              } catch (error) {
+                console.error("DEBUG: Gagal parse JSON!", error);
+                console.log("DEBUG: String bermasalah ->", line);
               }
-            } catch (error) {
-              /* Abaikan error parsing */
             }
           }
         }
@@ -275,7 +346,7 @@ export const useServicePublicChat = () => {
   const handleOpenModal = (citation) => setSelectedCitation(citation);
   const handleCloseModal = () => setSelectedCitation(null);
 
-   useEffect(() => {
+  useEffect(() => {
     const pusherKey = import.meta.env.VITE_PUSHER_KEY;
     const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
     if (!pusherKey || !pusherCluster || !authState.user?.id) return;
@@ -288,31 +359,53 @@ export const useServicePublicChat = () => {
       if (data.session_id === liveChatSessionId) {
         setChatMode("agent");
         toast.success(`Agen ${data.agent_name} telah terhubung!`);
-        setMessages((prev) => [...prev, { id: `system-${Date.now()}`, sender: "system", text: `Anda sekarang terhubung dengan ${data.agent_name}.` }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `system-${Date.now()}`,
+            sender: "system",
+            text: `Anda sekarang terhubung dengan ${data.agent_name}.`,
+          },
+        ]);
       }
     });
 
     userChannel.bind("session-resolved", (data) => {
-        if (data.session_id === liveChatSessionId) {
-            setChatMode("bot");
-            setLiveChatSessionId(null);
-            toast.success("Sesi chat dengan agen telah berakhir.");
-            setIsSessionView(true);
-        }
+      if (data.session_id === liveChatSessionId) {
+        // 1. Ubah mode kembali ke bot
+        setChatMode("bot");
+
+        // 2. Beri notifikasi di dalam chat dan melalui toast
+        toast.success("Sesi chat dengan agen telah berakhir.");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `system-resolved-${Date.now()}`,
+            sender: "system",
+            text: `Sesi dengan agen telah selesai. Anda dapat melanjutkan percakapan dengan AI Assistant.`,
+          },
+        ]);
+
+        // 3. Invalidate query untuk memperbarui daftar sesi
+        queryClient.invalidateQueries({ queryKey: ["userChatSessions"] });
+
+        // 4. Reset liveChatSessionId, tapi jangan ubah isSessionView
+        setLiveChatSessionId(null);
+      }
     });
-    
+
     userChannel.bind("agent-transferred", (data) => {
-        if (data.session_id === liveChatSessionId) {
-            toast.info("Percakapan Anda dialihkan ke agen lain.");
-            queryClient.invalidateQueries({ queryKey: ['userChatSessions'] });
-        }
+      if (data.session_id === liveChatSessionId) {
+        toast.info("Percakapan Anda dialihkan ke agen lain.");
+        queryClient.invalidateQueries({ queryKey: ["userChatSessions"] });
+      }
     });
 
     let sessionChannel;
     if (liveChatSessionId) {
       const channelName = `chat-session-${liveChatSessionId}`;
       sessionChannel = pusher.subscribe(channelName);
-      
+
       sessionChannel.bind("new_message", (newMessage) => {
         // --- PERBAIKAN UTAMA DI SINI ---
         // Cek apakah pengirim pesan BUKAN user saat ini.
