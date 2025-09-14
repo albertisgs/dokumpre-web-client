@@ -50,7 +50,7 @@ const ServicePublicChat = () => {
     messages, input, setInput, chatMode, isBotLoading, showAgentTrigger,
     isRequestingAgent, requestAgent, handleSendMessage, isSendingToAgent,
     citations, openCitations, selectedCitation, toggleCitations,
-    handleOpenModal, handleCloseModal, difyConversationId,
+    handleOpenModal, handleCloseModal, liveChatSessionId,
     // (BARU) Ambil state & handler sesi
     isSessionView, activeSessions, isLoadingSessions, handleSelectSession, handleCreateNewSession, isRestoringSession
   } = useServicePublicChat();
@@ -74,8 +74,8 @@ const ServicePublicChat = () => {
   };
 
   const handleRequestAgent = () => {
-    if (difyConversationId) {
-        requestAgent(difyConversationId);
+    if (liveChatSessionId) {
+        requestAgent(liveChatSessionId);
     }
   };
 

@@ -121,34 +121,32 @@ export const useServicePublicChat = () => {
     setIsRestoringSession(true);
     setLiveChatSessionId(session.id);
 
-    if (session.status === "active" || session.status === "queued") {
-      try {
-        const historyData = await fetchSessionHistory(session.id);
-        // Simpan dify_conversation_id saat sesi dipulihkan
-        setDifyConversationId(historyData.dify_conversation_id);
+   try {
+    const historyData = await fetchSessionHistory(session.id);
+    setDifyConversationId(historyData.dify_conversation_id);
 
-        const allMessages = historyData.messages
-          .map((msg) => ({
-            id: msg.id,
-            sender: msg.sender_type,
-            text: msg.message_text,
-            timestamp: msg.timestamp,
-          }))
-          .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    // Map semua pesan (dari bot dan agen) ke format yang seragam
+    const allMessages = historyData.messages
+      .map((msg) => ({
+        id: msg.id,
+        sender: msg.sender_type,
+        text: msg.message_text,
+        timestamp: msg.timestamp,
+      }))
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        setMessages(allMessages);
-        setChatMode(historyData.status === "active" ? "agent" : "bot");
-      } catch (error) {
-        toast.error("Gagal memuat riwayat chat.");
-        setLiveChatSessionId(null);
-      }
-    } else {
-      // Jika statusnya 'chatbot', kita hanya perlu memulai sesi baru
-      handleCreateNewSession();
-    }
+    setMessages(allMessages);
+    // Tentukan mode chat berdasarkan status sesi terakhir dari server
+    setChatMode(historyData.status === 'active' ? 'agent' : 'bot');
+  } catch (error) {
+    toast.error("Gagal memuat riwayat obrolan.");
+    setLiveChatSessionId(null);
+  } finally {
+    // Pindahkan dua baris ini ke dalam blok 'finally' agar selalu dijalankan
     setIsSessionView(false);
     setIsRestoringSession(false);
-  };
+  }
+};
 
   const handleCreateNewSession = () => {
     setMessages([
@@ -454,5 +452,6 @@ export const useServicePublicChat = () => {
     handleSelectSession,
     handleCreateNewSession,
     isRestoringSession,
+    liveChatSessionId
   };
 };
