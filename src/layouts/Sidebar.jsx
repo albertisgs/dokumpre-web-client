@@ -50,8 +50,11 @@ const Sidebar = () => {
 
   const [activeList, setActiveList] = useState('queue');
 
+  // --- PERUBAHAN LOGIKA DI SINI ---
   const showAgentSection = useMemo(() => {
-    return authState.user?.permissions?.includes("agent-dashboard:access");
+    const hasTeamAccess = authState.user?.access_list?.includes("agent-dashboard");
+    const hasRolePermission = authState.user?.permissions?.includes("agent-dashboard:access");
+    return hasTeamAccess && hasRolePermission;
   }, [authState.user]);
 
   useEffect(() => {
@@ -77,7 +80,6 @@ const Sidebar = () => {
   };
 
   useEffect(() => {
-    // Logika ini menentukan tab mana yang aktif secara default
     if (location.pathname.includes('/history')) {
         setActiveList('history');
     } else if (activeChat) {
@@ -87,6 +89,7 @@ const Sidebar = () => {
     }
   }, [location.pathname, activeChat]);
 
+  // --- PERUBAHAN LOGIKA DI SINI ---
   const accessibleMenu = useMemo(() => {
     const user = authState.user;
     const userAccessList = user?.access_list || [];
@@ -95,10 +98,22 @@ const Sidebar = () => {
 
     return menu.filter((item) => {
       if (userIsSuperAdmin) return true;
-      if (item.identifier === "user-management") return userPermissions.includes("user-management:master");
-      if (item.identifier === "role-management") return userPermissions.includes("role-management:master");
-      if (item.identifier === "team-management") return false; 
-      return userAccessList.includes(item.identifier);
+      
+      // Logika spesifik per identifier
+      switch (item.identifier) {
+        case "user-management":
+          return userPermissions.includes("user-management:master");
+        case "role-management":
+          return userPermissions.includes("role-management:master");
+        case "team-management":
+          return false; // Hanya untuk superadmin
+        case "agent-dashboard":
+          // Memerlukan akses tim DAN permission role
+          return userAccessList.includes("agent-dashboard") && userPermissions.includes("agent-dashboard:access");
+        default:
+          // Fallback untuk item menu lainnya
+          return userAccessList.includes(item.identifier);
+      }
     });
   }, [authState.user, isSuperAdmin]);
 

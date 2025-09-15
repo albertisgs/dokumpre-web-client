@@ -139,7 +139,19 @@ const AppContent = () => {
         // Invalidate query untuk data dokumen legal agar tabel di-refetch otomatis
         queryClient.invalidateQueries(['legalDocuments']);
       });
+
+
+      const imageExtractionChannel = pusher.subscribe('image-extractions');
+      imageExtractionChannel.bind('status-update', (data) => {
+        console.log('Received status update for image extraction:', data);
+        toast.success(`Ekstraksi gambar telah selesai dengan status: ${data.status}`);
+        // Invalidate query untuk data ekstraksi agar tabel di-refetch
+        queryClient.invalidateQueries({ queryKey: ['imageExtractions'] });
+      });
     }
+
+
+    
 
   
     // Cleanup semua channel saat komponen unmount
@@ -147,6 +159,7 @@ const AppContent = () => {
       pusher.unsubscribe("Scrapping-notification");
       pusher.unsubscribe("team-updates");
       pusher.unsubscribe('legal-documents');
+      pusher.unsubscribe('image-extractions');
       
       pusher.unsubscribe(userChannelName);
       pusher.unsubscribe(teamPermissionsChannelName);

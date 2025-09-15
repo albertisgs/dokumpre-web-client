@@ -11,6 +11,7 @@ const TeamManagementPage = lazy(()=>import('../pages/TeamManagement/TeamManageme
 const RoleManagementPage = lazy(()=>import('../pages/RoleManagement/RoleManagement'))
 const ServicePublicPage = lazy(()=>import('../pages/PublicService/ServicePublicChat'))
 const AgentDashboardPage = lazy(() => import('../pages/AgentDashboard/AgentDashboard'));
+const ExtractImagePage = lazy(() => import('../pages/ExtractImage/ExtractImagePage'));
 export const menu = [
   {
     title: 'Dashboard',
@@ -34,6 +35,14 @@ export const menu = [
     icon: '/cloud.svg',
     component: UploadPage,
 
+  },
+  {
+    title: 'Extract Image to PDF',
+    path: '/extract-image',
+    // Gunakan identifier dari upload-document jika hak aksesnya sama
+    identifier: 'upload-document', 
+    icon: '/text.svg', // Anda perlu membuat ikon ini
+    component: ExtractImagePage,
   },
   {
     title: 'Prompt Management',

@@ -7,25 +7,23 @@ import { useAuth } from "../../context/hooks/useAuth";
 
 
 const GlobalAccessGuard = ({ children }) => {
-  const { authState, isSuperAdmin } = useAuth(); // Ambil isSuperAdmin
+  const { authState, isSuperAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     const user = authState.user;
-    // Hanya jalankan jika pengguna sudah login
     if (!authState.authType || !user) {
       return;
     }
     
-    // Superadmin selalu diizinkan
     if (isSuperAdmin(user)) {
       return;
     }
 
     const userAccessList = user.access_list || [];
     const userPermissions = user.permissions || [];
-    const currentMenuItem = menu.find(item => item.path === location.pathname);
+    const currentMenuItem = menu.find(item => location.pathname.startsWith(item.path));
 
     if (currentMenuItem) {
       const { identifier } = currentMenuItem;
@@ -40,7 +38,11 @@ const GlobalAccessGuard = ({ children }) => {
           hasAccess = userPermissions.includes("role-management:master");
           break;
         case "team-management":
-          hasAccess = false; // Hanya untuk superadmin, akan selalu false di sini
+          hasAccess = false; // Hanya untuk superadmin
+          break;
+        // --- PERUBAHAN LOGIKA DI SINI ---
+        case "agent-dashboard":
+          hasAccess = userAccessList.includes("agent-dashboard") && userPermissions.includes("agent-dashboard:access");
           break;
         default:
           // Untuk halaman lain, cek berdasarkan access_list
