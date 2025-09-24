@@ -64,7 +64,7 @@ export const menu = [
     title: 'Service Public',
     path: '/service-public',
     identifier: 'service-public',
-    icon: '/shield.svg', // Ganti dengan ikon yang sesuai
+    icon: '/chat.svg', // Ganti dengan ikon yang sesuai
     component: ServicePublicPage,
   },
   {
