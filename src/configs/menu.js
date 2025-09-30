@@ -5,6 +5,7 @@ const KnowledgeBasePage = lazy(() => import('../pages/KnowledgeBase/KnowledgeBas
 const PromptManagementPage = lazy(() => import('../pages/PromptManagement/PromptManagement'));
 const MCInsightPage = lazy(() => import('../pages/Market&CompetitorInsight/MCInsight'));
 const UploadPage = lazy(()=>import('../pages/UploadDocument/uploadpage'))
+const DocumentManagement = lazy(()=>import('../pages/DocumentManagement/DocumentManagement'))
 const SippPage = lazy(()=>import('../pages/SippCaseDetails/sippcasepage'))
 const UserManagement = lazy(()=>import('../pages/UserManagament/usermanagement'))
 const TeamManagementPage = lazy(()=>import('../pages/TeamManagement/TeamManagement'))
@@ -34,6 +35,14 @@ export const menu = [
     identifier: 'upload-document',
     icon: '/cloud.svg',
     component: UploadPage,
+
+  },
+    {
+    title: 'Document Management',
+    path: '/document-management',
+    identifier: 'manage-document',
+    icon: '/prompt-management.svg',
+    component: DocumentManagement,
 
   },
   {

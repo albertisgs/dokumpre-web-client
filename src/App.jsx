@@ -9,7 +9,7 @@ import { menu } from "./configs/menu";
 import Pusher from "pusher-js";
 import toast, { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
-import { useAuth } from "./context/hooks/UseAuth";
+import { useAuth } from "./context/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 
 // Komponen AppRouter tidak berubah

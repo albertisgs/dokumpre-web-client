@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   Clock,
-  Eye,   
+  Eye,
+  Edit
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -304,6 +305,7 @@ export default function UploadPage() {
                     <td className="px-6 py-4">{getStatusComponent(doc.status)}</td>
                     <td className="px-6 py-4 flex justify-center gap-2">
                       <a href={`${import.meta.env.VITE_API_URL_GENERAL}/public${doc.file_path}`} target="_blank" rel="noopener noreferrer" className={`font-medium text-blue-600 hover:underline ${doc.status !== 'completed' && 'pointer-events-none text-gray-400'}`}><Eye className="w-4 h-4"/></a>
+                      <button onClick={() => alert("TODO: Implement Replacement Upload")} className="font-medium text-red-600 hover:underline"><Edit className="w-4 h-4"/></button>
                       <button onClick={() => handleDelete(doc.id)} className="font-medium text-red-600 hover:underline"><Trash2 className="w-4 h-4"/></button>
                     </td>
                   </tr>
