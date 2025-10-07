@@ -326,7 +326,7 @@ export default function ExtractImagePage() {
                 documents.map((doc) => (
                   <tr
                     key={doc.id}
-                    className="bg-white border-b hover:bg-gray-50"
+                    className="bg-white border-b border-gray-200 hover:bg-gray-50"
                   >
                     <td className="px-4 py-4">
                       <input

@@ -67,11 +67,11 @@ export const useDeleteDocument = () => {
     return useMutation({
         mutationFn: deleteDocument,
         onSuccess: () => {
-            toast.success('Dokumen berhasil dihapus.');
+            toast.success('Document is successfully deleted.');
             queryClient.invalidateQueries({ queryKey: ['legalDocuments'] });
         },
         onError: (error) => {
-            toast.error(error.response?.data?.message || 'Gagal menghapus dokumen.');
+            toast.error(error.response?.data?.message || 'Fail to delete document.');
         }
     });
 };

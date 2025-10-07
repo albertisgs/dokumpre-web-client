@@ -134,7 +134,7 @@ const AppContent = () => {
         console.log('Received status update:', data);
         
         // Tampilkan notifikasi toast
-        toast.success(`Dokumen telah selesai diproses dengan status: ${data.status}`);
+        toast.success(`The document has been processed with the status: ${data.status}`);
 
         // Invalidate query untuk data dokumen legal agar tabel di-refetch otomatis
         queryClient.invalidateQueries(['legalDocuments']);

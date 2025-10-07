@@ -40,7 +40,7 @@ export const menu = [
     {
     title: 'Document Management',
     path: '/document-management',
-    identifier: 'manage-document',
+    identifier: 'document-management',
     icon: '/prompt-management.svg',
     component: DocumentManagement,
 

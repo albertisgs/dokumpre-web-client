@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from "react";
+import ReplaceDocumentModal from "../UploadDocument/components/ReplaceDocumentModal";
+
 import {
   useGetLegalDocuments,
   useUploadDocument,
@@ -19,6 +21,8 @@ import {
   Edit
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useReplaceDocument } from "./hooks/useReplaceDocument";
+import { useGetPendingDocument } from "./hooks/useGetPendingDocument";
 
 // Ganti nama komponen menjadi PascalCase
 export default function UploadPage() {
@@ -27,6 +31,12 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [doc, setDoc] = useState(null);
+  const [pendingDoc, setPendingDoc] = useState(null);
+    const [isCheckingPending, setIsCheckingPending] = useState(false);
+  const { mutate: replaceDocument, isPending: isReplacing } = useReplaceDocument();
+  const { mutate: getPendingDoc, isPending} = useGetPendingDocument();
 
   // Hooks dari React Query untuk interaksi API
   const {
@@ -58,6 +68,47 @@ export default function UploadPage() {
       );
     }
     setFilesToUpload((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleOpenReplaceModal = (doc) => {
+    setDoc(doc);
+    getPendingDoc(doc.id, {
+      onSuccess: (res) => {
+        setPendingDoc(res); 
+        setIsModalOpen(true);
+      },
+      onError: () => {
+        toast.error("Failed to fetch pending document");
+      },
+    });
+  };
+
+  const handleConfirmReplace = (newFile) => {
+    if (!doc || !newFile) return;
+
+    const formData = new FormData();
+    formData.append("document_replace_id", doc.id);
+    formData.append("file", newFile);
+
+    replaceDocument(formData, {
+      onSuccess: () => {
+        toast.success("The document has been successfully uploaded!", {
+          duration: 10000,
+        });
+        handleCloseModal();
+      },
+      onError: () => {
+        toast.error("Failed to replace document: An error occurred", {
+          duration: 10000,
+        });
+      },
+    });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setDoc(null);
+    setPendingDoc(null);
   };
 
   const handleDragOver = useCallback((e) => {
@@ -166,8 +217,7 @@ export default function UploadPage() {
   return (
     <>
       <div className="text-gray-500 text-md">
-        Halaman ini digunakan untuk mengunggah dokumen legal yang akan digunakan
-        sebagai basis pengetahuan.
+        This page is used to upload legal documents that will be used as a knowledge base.
       </div>
 
       {/* --- Bagian Upload --- */}
@@ -186,27 +236,27 @@ export default function UploadPage() {
             multiple
             className="hidden"
             onChange={(e) => handleFileSelect(e.target.files)}
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+            accept=".pdf,.txt,application/pdf,text/plain"
           />
           <UploadCloud className="w-12 h-12 text-gray-400 mb-4" />
           <p className="text-gray-600">
-            Tarik dokumen ke sini, atau{" "}
+            Drag the document here, or{" "}
             <label
               htmlFor="file-input"
               className="text-blue-600 font-semibold cursor-pointer hover:underline"
             >
-              pilih file
+              choose file
             </label>
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            Mendukung: PDF, DOC, DOCX, JPG, PNG.
+            Supports: PDF, TXT.
           </p>
         </div>
 
         {/* --- Daftar File Siap Upload --- */}
         {filesToUpload.length > 0 && (
           <div className="mt-4 space-y-2">
-            <h3 className="font-semibold text-gray-700">File siap diunggah:</h3>
+            <h3 className="font-semibold text-gray-700">File ready to be uploaded:</h3>
             {filesToUpload.map((file, index) => (
               <div
                 key={index}
@@ -251,7 +301,7 @@ export default function UploadPage() {
             {isUploading ? (
               <>
                 <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                Mengunggah...
+                Uploading...
               </>
             ) : (
               <>
@@ -267,11 +317,11 @@ export default function UploadPage() {
             {/* --- Tabel Dokumen Terunggah (diperbarui) --- */}
       <div className="bg-white p-6 rounded-lg shadow-md mt-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Dokumen Tersimpan</h2>
+          <h2 className="text-xl font-bold">Document Saved</h2>
           {selectedDocs.length > 0 && (
             <button onClick={handleMultipleDelete} disabled={isDeletingMultiple} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center disabled:bg-gray-400">
               {isDeletingMultiple ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Trash2 className="h-5 w-5 mr-2" />}
-              Hapus ({selectedDocs.length})
+              Delete ({selectedDocs.length})
             </button>
           )}
         </div>
@@ -280,19 +330,19 @@ export default function UploadPage() {
           <table className="w-full text-sm text-left text-gray-500 table-fixed">
             <thead className="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-4 w-1/24"><input type="checkbox" onChange={handleSelectAll} checked={documents && documents.length > 0 && selectedDocs.length === documents.length} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"/></th>
-                <th className="px-6 py-4 w-1/12">Tanggal Unggah</th>
-                <th className="px-6 py-4 w-4/12">Nama Dokumen</th>
-                <th className="px-6 py-4 w-2/12">Tipe</th>
+                <th className="px-4 py-4 w-1/24"><input type="checkbox" onChange={handleSelectAll} checked={!!(documents?.length && selectedDocs.length === documents.length)} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"/></th>
+                <th className="px-6 py-4 w-1/12">Uploaded Date</th>
+                <th className="px-6 py-4 w-4/12">Document Name</th>
+                <th className="px-6 py-4 w-2/12">Type</th>
                 <th className="px-6 py-4 w-1/12">Staff</th>
-                <th className="px-6 py-4 w-1/12">Tim</th>
+                <th className="px-6 py-4 w-1/12 text-center">Team</th>
                 <th className="px-6 py-4 w-1/12">Status</th>
-                <th className="px-6 py-4 w-1/12 text-center">Aksi</th>
+                <th className="px-6 py-4 w-1/12 text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoadingDocs ? ( <tr><td colSpan="8" className="text-center py-4"><Loader2 className="animate-spin inline-block" /></td></tr> )
-               : isError ? ( <tr><td colSpan="8" className="text-center py-4 text-red-500">Gagal memuat data.</td></tr> )
+               : isError ? ( <tr><td colSpan="8" className="text-center py-4 text-red-500">Failed to load data.</td></tr> )
                : documents && documents.length > 0 ? (
                 documents.map((doc) => (
                   <tr key={doc.id} className="bg-white border-b hover:bg-gray-50 border-gray-200">
@@ -301,20 +351,22 @@ export default function UploadPage() {
                     <td className="px-6 py-4 font-medium text-gray-900 break-words">{doc.document_name}</td>
                     <td className="px-6 py-4">{doc.document_type}</td>
                     <td className="px-6 py-4">{doc.staff}</td>
-                    <td className="px-6 py-4">{doc.team}</td>
+                    <td className="px-6 py-4 text-center">{doc.team}</td>
                     <td className="px-6 py-4">{getStatusComponent(doc.status)}</td>
                     <td className="px-6 py-4 flex justify-center gap-2">
                       <a href={`${import.meta.env.VITE_API_URL_GENERAL}/public${doc.file_path}`} target="_blank" rel="noopener noreferrer" className={`font-medium text-blue-600 hover:underline ${doc.status !== 'completed' && 'pointer-events-none text-gray-400'}`}><Eye className="w-4 h-4"/></a>
-                      <button onClick={() => alert("TODO: Implement Replacement Upload")} className="font-medium text-red-600 hover:underline"><Edit className="w-4 h-4"/></button>
-                      <button onClick={() => handleDelete(doc.id)} className="font-medium text-red-600 hover:underline"><Trash2 className="w-4 h-4"/></button>
+                      <button onClick={() => handleOpenReplaceModal(doc)} className="font-medium text-yellow-600 hover:underline cursor-pointer"><Edit className="w-4 h-4"/></button>
+                      <button onClick={() => handleDelete(doc.id)} className="font-medium text-red-600 hover:underline cursor-pointer"><Trash2 className="w-4 h-4"/></button>
                     </td>
                   </tr>
                 ))
-              ) : ( <tr><td colSpan="8" className="text-center py-4">Belum ada dokumen yang diunggah.</td></tr> )}
+              ) : ( <tr><td colSpan="8" className="text-center py-4">No documents have been uploaded yet.</td></tr> )}
             </tbody>
           </table>
         </div>
       </div>
+
+      <ReplaceDocumentModal isOpen={isModalOpen} onClose={handleCloseModal} document={doc} pendingDocument={pendingDoc}  onReplace={handleConfirmReplace} isReplacing={isReplacing} isPending={isPending} />
     </>
   );
 }

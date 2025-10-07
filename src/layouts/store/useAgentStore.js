@@ -85,7 +85,7 @@ export const useAgentStore = create((set, get) => ({
 
             // Gunakan fungsi _mergeChatHistory untuk memproses sesi yang aktif saat inisialisasi
             const chatWithHistory = get()._mergeChatHistory(activeChatRes.data);
-            console.log(chatWithHistory)
+            // console.log(chatWithHistory)
             set({
                 queue: queueRes.data,
                 activeChat: chatWithHistory,
