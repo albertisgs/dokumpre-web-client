@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  dokuprime-web-client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dokuprime_web_client
+    image: dokuprime-web-client
+    ports:
+      - "5178:5178"
+    restart: always

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import axiosInstance from '../../../axios/axiosInstance';
-import { useAuth } from '../../../context/hooks/UseAuth';
+import { useAuth } from '../../../context/hooks/useAuth';
 
 
 const fetchSyncData = async (isSuperAdminUser) => {

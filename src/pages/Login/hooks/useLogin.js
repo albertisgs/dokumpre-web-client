@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { handleCredentialLogin, handleGoogleBELogin, handleMicrosoftLogin } from "../handler/loginHandler";
-import { useAuth } from "../../../context/hooks/UseAuth";
+import { useAuth } from "../../../context/hooks/useAuth";
 
 
 export const useLogin = () => {

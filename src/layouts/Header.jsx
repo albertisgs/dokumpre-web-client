@@ -5,7 +5,7 @@ import { LogOut } from "lucide-react";
 import { MicrosoftLogout } from "../pages/Login/handler/logoutMicrosoft";
 import { menu } from "../configs/menu";
 import { handleLogoutSession } from "../pages/Login/handler/logoutHandler";
-import { useAuth } from "../context/hooks/UseAuth";
+import { useAuth } from "../context/hooks/useAuth";
 import Notifications from "../components/notifications/Notifications";
 
 const Header = () => {
