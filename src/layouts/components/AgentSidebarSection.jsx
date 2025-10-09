@@ -11,6 +11,7 @@ const AgentSidebarSection = ({
   agentStatus,
 }) => {
   const navigate = useNavigate();
+  console.log("line 14", counts)
 
   const agentInitial = agentName
     ? agentName
@@ -95,6 +96,18 @@ const AgentSidebarSection = ({
           </span>
           <span className="text-gray-600">Riwayat</span>
         </button>
+        <button
+          onClick={() => setActiveList("pending")}
+          className={`flex-1 rounded-md py-1 text-xs transition-all duration-200 ${
+            activeList === "pending" ? activeTabStyle : inactiveTabStyle
+          }`}
+        >
+          <span className="block font-bold text-lg text-gray-800">
+            {counts.pending}
+          </span>
+          <span className="text-gray-600">Pending</span>
+        </button>
+
       </div>
     </div>
   );

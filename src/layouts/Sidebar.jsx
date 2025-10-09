@@ -42,11 +42,11 @@ const Sidebar = () => {
   const { authState, isSuperAdmin } = useAuth();
   
   const { 
-    queue, activeChat, history, initialize, claimChat, 
+    queue, activeChat, history, initialize, claimChat, pending, 
     managePresence, agentStatus, fetchHistoryTranscript 
   } = useAgentStore();
   
-  const { queueCount, activeCount, historyCount, agentName } = useAgentData();
+  const { queueCount, activeCount, historyCount, pendingCount, agentName } = useAgentData();
 
   const [activeList, setActiveList] = useState('queue');
 
@@ -67,6 +67,13 @@ const Sidebar = () => {
     }
   }, [showAgentSection, initialize, managePresence]);
 
+  const handlePendingSelect = async (sessionId) => {
+    const session = await claimChat(sessionId);
+    if (session) {
+        navigate(`/agent-dashboard/${session.id}`);
+    }
+  };
+
   const handleQueueSelect = async (sessionId) => {
     const session = await claimChat(sessionId);
     if (session) {
@@ -84,8 +91,10 @@ const Sidebar = () => {
         setActiveList('history');
     } else if (activeChat) {
         setActiveList('active');
-    } else {
+    } else if (activeChat) {
         setActiveList('queue');
+    } else {
+      setActiveList('pending');
     }
   }, [location.pathname, activeChat]);
 
@@ -151,7 +160,7 @@ const Sidebar = () => {
           <AgentSidebarSection 
             activeList={activeList}
             setActiveList={setActiveList}
-            counts={{ active: activeCount, queue: queueCount, history: historyCount }}
+            counts={{ active: activeCount, queue: queueCount, history: historyCount, pending: pendingCount }}
             agentName={agentName}
             agentStatus={agentStatus}
           />
@@ -199,6 +208,28 @@ const Sidebar = () => {
                 )}
               </>
             )}
+
+            {activeList === 'pending' && (
+              <>
+                <div className="px-5 py-2 bg-gray-100 border-y border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
+                  <Clock className="w-4 h-4 mr-2" /> Pending Chat ({pending.length})
+                </div>
+                {pending.length > 0 ? (
+                  pending.map((chat) => (
+                    <ChatListItem
+                      key={chat.session_id}
+                      chat={chat}
+                      isActive={false}
+                      onClick={() => handlePendingSelect(chat.session_id)}
+                      type="pending"
+                    />
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-xs text-gray-400">Tidak ada pending.</p>
+                )}
+              </>
+            )}
+
           </div>
         </div>
       )}

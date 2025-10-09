@@ -241,6 +241,7 @@ const AgentDashboard = () => {
   }
 
   if (sessionId && activeChat && activeChat.id === sessionId) {
+    console.log("line 244", sessionId, activeChat.id)
     return <LiveChatWindow />;
   }
 

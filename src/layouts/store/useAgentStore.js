@@ -6,6 +6,7 @@ import Pusher from 'pusher-js';
 // --- API Functions ---
 const api = {
     fetchQueue: () => axiosInstance.generalSession.get('/api/live-chat/agent/queue'),
+    fetchPending: () => axiosInstance.generalSession.get('/api/live-chat/agent/pending'),
     fetchMyActiveSession: () => axiosInstance.generalSession.get('/api/live-chat/agent/my-session'),
     fetchHistoryList: () => axiosInstance.generalSession.get('/api/live-chat/agent/history'),
     claimChat: (sessionId) => axiosInstance.generalSession.post(`/api/live-chat/agent/sessions/${sessionId}/claim`),
@@ -53,6 +54,7 @@ const unsubscribeAll = () => {
 // --- Zustand Store ---
 export const useAgentStore = create((set, get) => ({
     queue: [],
+    pending: [],
     activeChat: null,
     history: [],
     agentStatus: 'offline',
@@ -77,8 +79,9 @@ export const useAgentStore = create((set, get) => ({
      initialize: async () => {
         if (get().isInitialized) return;
         try {
-            const [queueRes, activeChatRes, historyRes] = await Promise.all([
-                api.fetchQueue(),
+            const [queueRes, pendingRes, activeChatRes, historyRes] = await Promise.all([
+                api.fetchQueue(), 
+                api.fetchPending(),
                 api.fetchMyActiveSession(),
                 api.fetchHistoryList()
             ]);
@@ -86,8 +89,10 @@ export const useAgentStore = create((set, get) => ({
             // Gunakan fungsi _mergeChatHistory untuk memproses sesi yang aktif saat inisialisasi
             const chatWithHistory = get()._mergeChatHistory(activeChatRes.data);
             // console.log(chatWithHistory)
+            console.log("line 91", queueRes)
             set({
                 queue: queueRes.data,
+                pending: pendingRes.data,
                 activeChat: chatWithHistory,
                 history: historyRes.data,
                 isInitialized: true
@@ -107,13 +112,13 @@ export const useAgentStore = create((set, get) => ({
             const newActiveChat = get()._mergeChatHistory(claimedSession);
 
             set({ activeChat: newActiveChat, selectedHistoryTranscript: null });
-            get().fetchQueue();
+            get().fetchQueue(); get().fetchPending();
             get().setupPusherListeners();
             toast.success(`Terhubung dengan ${newActiveChat.user_name}`);
             return newActiveChat;
         } catch (error) {
             toast.error(error.response?.data?.detail || "Gagal mengklaim obrolan.");
-            get().fetchQueue();
+            get().fetchQueue(); get().fetchPending();
             throw error;
         }
     },
@@ -152,8 +157,10 @@ export const useAgentStore = create((set, get) => ({
         const pusher = getPusherInstance();
         if (!pusher) return;
 
-        subscribe('agent-dashboard', 'new-pending-session', () => get().fetchQueue());
+        subscribe('agent-dashboard', 'new-queue-session', () => get().fetchQueue());
         subscribe('agent-dashboard', 'session-claimed', () => get().fetchQueue());
+        subscribe('agent-dashboard', 'new-pending-session', () => get().fetchPending());
+        subscribe('agent-dashboard', 'session-claimed', () => get().fetchPending());
 
         const activeChat = get().activeChat;
         if (activeChat) {
@@ -188,6 +195,11 @@ export const useAgentStore = create((set, get) => ({
     fetchQueue: async () => {
         const { data } = await api.fetchQueue();
         set({ queue: data });
+        console.log("line 197", queue)
+    },
+    fetchPending: async () => {
+        const { data } = await api.fetchPending();
+        set({ pending: data });
     },
     fetchHistory: async () => {
         const { data } = await api.fetchHistoryList();
