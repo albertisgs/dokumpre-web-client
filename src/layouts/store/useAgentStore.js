@@ -7,7 +7,7 @@ import Pusher from 'pusher-js';
 const api = {
     fetchQueue: () => axiosInstance.generalSession.get('/api/live-chat/agent/queue'),
     fetchPending: () => axiosInstance.generalSession.get('/api/live-chat/agent/pending'),
-    fetchMyActiveSession: () => axiosInstance.generalSession.get('/api/live-chat/agent/my-session'),
+    fetchMyActiveSession: () => axiosInstance.generalSession.get('/api/live-chat/agent/my-sessions'),
     fetchHistoryList: () => axiosInstance.generalSession.get('/api/live-chat/agent/history'),
     claimChat: (sessionId) => axiosInstance.generalSession.post(`/api/live-chat/agent/sessions/${sessionId}/claim`),
     endSession: (sessionId) => axiosInstance.generalSession.post(`/api/live-chat/agent/sessions/${sessionId}/resolve`),
@@ -18,7 +18,7 @@ const api = {
 
 // --- Pusher Helper ---
 let pusherInstance = null;
-let presenceInitialized=false
+let presenceInitialized = false;
 const subscribedChannels = new Set();
 
 const getPusherInstance = () => {
@@ -32,93 +32,86 @@ const getPusherInstance = () => {
     return pusherInstance;
 };
 
-const subscribe = (channelName, eventName, callback) => {
-    const pusher = getPusherInstance();
-    if (pusher) {
-        const channel = pusher.subscribe(channelName);
-        channel.bind(eventName, callback);
-        subscribedChannels.add(channelName);
-    }
-};
-
-const unsubscribeAll = () => {
-    const pusher = getPusherInstance();
-    if (pusher) {
-        subscribedChannels.forEach(channelName => {
-            pusher.unsubscribe(channelName);
-        });
-        subscribedChannels.clear();
-    }
-};
-
 // --- Zustand Store ---
 export const useAgentStore = create((set, get) => ({
     queue: [],
     pending: [],
-    activeChat: null,
     history: [],
+    
+    // --- STATE TELAH DIUBAH UNTUK MULTI-CHAT ---
+    activeChats: [],        // Menggantikan activeChat: null
+    selectedChatId: null,   // Untuk melacak chat aktif yang sedang dibuka
+    // ---------------------------------------------
+
     agentStatus: 'offline',
     isInitialized: false,
     selectedHistoryTranscript: null,
     isTranscriptLoading: false,
 
-    // Fungsi untuk menggabungkan riwayat dan pesan
     _mergeChatHistory: (sessionData) => {
         if (!sessionData) return null;
-        
-        // Memastikan riwayat dari chatbot (history) dan pesan live (messages) digabung dan diurutkan
         const allMessages = [
             ...(sessionData.history || []), 
             ...(sessionData.messages || [])
         ].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        
-        // Mengembalikan objek sesi yang baru dengan array `allMessages`
         return { ...sessionData, allMessages };
     },
 
-     initialize: async () => {
+    initialize: async () => {
         if (get().isInitialized) return;
         try {
-            const [queueRes, pendingRes, activeChatRes, historyRes] = await Promise.all([
+            // NOTE: fetchMyActiveSession idealnya mengembalikan array jika agen bisa memiliki sesi aktif saat login.
+            // Untuk saat ini, kita asumsikan mulai dari nol untuk kesederhanaan.
+            const [queueRes, pendingRes, activeSessionsRes, historyRes] = await Promise.all([
                 api.fetchQueue(), 
                 api.fetchPending(),
-                api.fetchMyActiveSession(),
+                api.fetchMyActiveSession(), // Ini mungkin perlu diubah di backend
                 api.fetchHistoryList()
             ]);
 
-            // Gunakan fungsi _mergeChatHistory untuk memproses sesi yang aktif saat inisialisasi
-            const chatWithHistory = get()._mergeChatHistory(activeChatRes.data);
-            // console.log(chatWithHistory)
-            console.log("line 91", queueRes)
+            let initialActiveChats = [];
+            if (activeSessionsRes.data) {
+                // Jika API hanya mengembalikan satu objek, bungkus dalam array
+                const sessions = Array.isArray(activeSessionsRes.data) ? activeSessionsRes.data : [activeSessionsRes.data];
+                initialActiveChats = sessions.map(session => get()._mergeChatHistory(session));
+            }
+            
             set({
                 queue: queueRes.data,
                 pending: pendingRes.data,
-                activeChat: chatWithHistory,
+                activeChats: initialActiveChats,
                 history: historyRes.data,
                 isInitialized: true
             });
             get().setupPusherListeners();
         } catch (error) {
             console.error("Gagal menginisialisasi data agen:", error);
-            set({ isInitialized: true });
+            set({ isInitialized: true, activeChats: [] });
         }
     },
     
     claimChat: async (sessionId) => {
         try {
             const { data: claimedSession } = await api.claimChat(sessionId);
-            
-            // Gunakan fungsi _mergeChatHistory untuk memproses sesi yang baru diklaim
             const newActiveChat = get()._mergeChatHistory(claimedSession);
 
-            set({ activeChat: newActiveChat, selectedHistoryTranscript: null });
-            get().fetchQueue(); get().fetchPending();
-            get().setupPusherListeners();
+            set(state => ({
+                // Tambahkan chat baru ke dalam array activeChats
+                activeChats: [...state.activeChats, newActiveChat],
+                // Otomatis pilih chat yang baru diklaim
+                selectedChatId: newActiveChat.id,
+                selectedHistoryTranscript: null
+            }));
+
+            get().fetchQueue();
+            get().fetchPending();
+            get().setupPusherListeners(); // Panggil untuk subscribe ke channel baru
             toast.success(`Terhubung dengan ${newActiveChat.user_name}`);
             return newActiveChat;
         } catch (error) {
             toast.error(error.response?.data?.detail || "Gagal mengklaim obrolan.");
-            get().fetchQueue(); get().fetchPending();
+            get().fetchQueue();
+            get().fetchPending();
             throw error;
         }
     },
@@ -127,64 +120,40 @@ export const useAgentStore = create((set, get) => ({
         const tempId = `temp-${Date.now()}`;
         const optimisticMessage = { id: tempId, session_id: sessionId, sender_id: agentId, sender_type: 'agent', message_text: text, timestamp: new Date().toISOString() };
         
+        // Perbarui pesan di chat yang benar dalam array activeChats
         set(state => ({
-            activeChat: state.activeChat ? { ...state.activeChat, allMessages: [...(state.activeChat.allMessages || []), optimisticMessage] } : null
+            activeChats: state.activeChats.map(chat => 
+                chat.id === sessionId 
+                ? { ...chat, allMessages: [...(chat.allMessages || []), optimisticMessage] } 
+                : chat
+            )
         }));
 
         try {
             await api.postAgentMessage(sessionId, text);
         } catch (error) {
             toast.error("Gagal mengirim pesan.");
+            // Hapus pesan optimistis jika pengiriman gagal
             set(state => ({
-                activeChat: state.activeChat ? { ...state.activeChat, allMessages: state.activeChat.allMessages.filter(msg => msg.id !== tempId) } : null
+                activeChats: state.activeChats.map(chat =>
+                    chat.id === sessionId
+                    ? { ...chat, allMessages: chat.allMessages.filter(msg => msg.id !== tempId) }
+                    : chat
+                )
             }));
         }
     },
 
-    fetchHistoryTranscript: async (sessionId) => {
-        set({ isTranscriptLoading: true, activeChat: null, selectedHistoryTranscript: null });
-        try {
-            const { data } = await api.fetchTranscript(sessionId);
-            set({ selectedHistoryTranscript: data, isTranscriptLoading: false });
-        } catch (error) {
-            toast.error("Gagal memuat transkrip.");
-            set({ isTranscriptLoading: false });
-        }
-    },
-    
-    setupPusherListeners: () => {
-        unsubscribeAll();
-        const pusher = getPusherInstance();
-        if (!pusher) return;
-
-        subscribe('agent-dashboard', 'new-queue-session', () => get().fetchQueue());
-        subscribe('agent-dashboard', 'session-claimed', () => get().fetchQueue());
-        subscribe('agent-dashboard', 'new-pending-session', () => get().fetchPending());
-        subscribe('agent-dashboard', 'session-claimed', () => get().fetchPending());
-
-        const activeChat = get().activeChat;
-        if (activeChat) {
-            subscribe(`chat-session-${activeChat.id}`, 'new_message', (newMessage) => {
-                set(state => {
-                    const currentChat = state.activeChat;
-                    if (currentChat && currentChat.id === newMessage.session_id) {
-                        const messageExists = currentChat.allMessages.some(msg => msg.id === newMessage.id);
-                        if (!messageExists) {
-                            const updatedMessages = [...currentChat.allMessages.filter(msg => !String(msg.id).startsWith('temp-')), newMessage].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-                            return { activeChat: { ...currentChat, allMessages: updatedMessages } };
-                        }
-                    }
-                    return state;
-                });
-            });
-        }
-    },
-    
-    // Sisa actions (endSession, changeStatus, dll.) tetap sama
     endSession: async (sessionId) => {
         try {
             const { data } = await api.endSession(sessionId);
-            set({ activeChat: null, selectedHistoryTranscript: null });
+            set(state => ({
+                // Hapus sesi dari array activeChats
+                activeChats: state.activeChats.filter(chat => chat.id !== sessionId),
+                // Jika sesi yang ditutup sedang aktif, reset pilihan
+                selectedChatId: state.selectedChatId === sessionId ? null : state.selectedChatId,
+                selectedHistoryTranscript: null
+            }));
             get().fetchHistory();
             toast.success(data.message || 'Sesi berhasil diselesaikan.');
         } catch (error) {
@@ -192,10 +161,88 @@ export const useAgentStore = create((set, get) => ({
             throw error;
         }
     },
+
+    fetchHistoryTranscript: async (sessionId) => {
+        set({ isTranscriptLoading: true, selectedHistoryTranscript: null });
+        try {
+            const { data } = await api.fetchTranscript(sessionId);
+            set({ selectedHistoryTranscript: data, isTranscriptLoading: false, selectedChatId: null });
+        } catch (error) {
+            toast.error("Gagal memuat transkrip.");
+            set({ isTranscriptLoading: false });
+        }
+    },
+
+    // --- AKSI BARU UNTUK MENGELOLA UI ---
+    selectActiveChat: (sessionId) => {
+        set({
+            selectedChatId: sessionId,
+            selectedHistoryTranscript: null // Membersihkan tampilan riwayat
+        });
+    },
+
+    clearSelectedTranscript: () => {
+        set({ selectedHistoryTranscript: null });
+    },
+    // ------------------------------------
+    
+    setupPusherListeners: () => {
+        const pusher = getPusherInstance();
+        if (!pusher) return;
+
+        // Unsubscribe dari channel yang tidak aktif lagi
+        const activeChannelNames = new Set(get().activeChats.map(c => `chat-session-${c.id}`));
+        activeChannelNames.add('agent-dashboard');
+
+        subscribedChannels.forEach(channelName => {
+            if (!activeChannelNames.has(channelName)) {
+                pusher.unsubscribe(channelName);
+                subscribedChannels.delete(channelName);
+            }
+        });
+
+        // Subscribe ke channel dashboard (selalu)
+        if (!subscribedChannels.has('agent-dashboard')) {
+            const dashboardChannel = pusher.subscribe('agent-dashboard');
+            dashboardChannel.bind('session-claimed', () => get().fetchQueue());
+            dashboardChannel.bind('new-pending-session', () => get().fetchQueue());
+            subscribedChannels.add('agent-dashboard');
+        }
+
+        // Subscribe ke setiap channel sesi aktif
+        get().activeChats.forEach(chat => {
+            const channelName = `chat-session-${chat.id}`;
+            if (!subscribedChannels.has(channelName)) {
+                const channel = pusher.subscribe(channelName);
+                channel.bind('new_message', (newMessage) => {
+                    set(state => {
+                        const targetChat = state.activeChats.find(c => c.id === newMessage.session_id);
+                        if (targetChat) {
+                            const messageExists = targetChat.allMessages.some(msg => msg.id === newMessage.id);
+                            if (!messageExists) {
+                                const updatedMessages = [...targetChat.allMessages.filter(msg => !String(msg.id).startsWith('temp-')), newMessage]
+                                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                                
+                                return {
+                                    activeChats: state.activeChats.map(c => 
+                                        c.id === newMessage.session_id 
+                                        ? { ...c, allMessages: updatedMessages } 
+                                        : c
+                                    )
+                                };
+                            }
+                        }
+                        return state;
+                    });
+                });
+                subscribedChannels.add(channelName);
+            }
+        });
+    },
+    
     fetchQueue: async () => {
         const { data } = await api.fetchQueue();
         set({ queue: data });
-        console.log("line 197", queue)
     },
     fetchPending: async () => {
         const { data } = await api.fetchPending();
@@ -210,24 +257,16 @@ export const useAgentStore = create((set, get) => ({
         try {
             const { data } = await api.updateAgentStatus(newStatus);
             set({ agentStatus: data.new_status });
-            // if (newStatus !== 'offline') {
-            //     toast.success(`Status Anda sekarang: ${data.new_status}`, { duration: 2000 });
-            // }
         } catch (error) {
             toast.error(error.response?.data?.detail || "Gagal mengubah status.");
         }
     },
-
-    // **[FOKUS 4]** Action untuk mengelola semua event listener kehadiran
+    
     managePresence: () => {
-        if (presenceInitialized) return; // Jangan setup listener lebih dari sekali
-
+        if (presenceInitialized) return;
         const store = get();
-
-        // 1. Set status ONLINE saat pertama kali dipanggil
         store.changeStatus('online');
 
-        // 2. Handler untuk mengubah status saat tab visibility berubah
         const handleVisibilityChange = () => {
             const currentStatus = get().agentStatus;
             if (document.hidden && currentStatus === 'online') {
@@ -237,9 +276,7 @@ export const useAgentStore = create((set, get) => ({
             }
         };
 
-        // 3. Handler untuk mengubah status OFFLINE saat tab ditutup
         const handleBeforeUnload = () => {
-            // Gunakan sendBeacon untuk pengiriman yang andal saat halaman ditutup
             if (navigator.sendBeacon) {
                 const url = `${import.meta.env.VITE_API_URL_GENERAL}/api/live-chat/agent/status`;
                 const blob = new Blob([JSON.stringify({ status: 'offline' })], { type: 'application/json' });
@@ -247,13 +284,10 @@ export const useAgentStore = create((set, get) => ({
             }
         };
 
-        // Tambahkan event listeners
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('beforeunload', handleBeforeUnload);
-        
         presenceInitialized = true;
         
-        // Return fungsi cleanup untuk dipanggil saat tidak lagi dibutuhkan
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);

@@ -150,9 +150,6 @@ const AppContent = () => {
       });
     }
 
-
-    
-
   
     // Cleanup semua channel saat komponen unmount
     return () => {

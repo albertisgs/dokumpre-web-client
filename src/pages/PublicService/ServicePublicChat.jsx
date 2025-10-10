@@ -13,12 +13,15 @@ const SessionSelector = ({ sessions, onSelect, onCreate, isLoading, isRestoring 
             {isLoading || isRestoring ? (
                 <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
             ) : (
-                <div className="text-center max-w-lg">
+                <div className="text-center max-w-lg w-full"> {/* Menambahkan w-full agar container mengambil lebar max-w-lg */}
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Selamat Datang Kembali!</h2>
                     {sessions && sessions.length > 0 ? (
                         <>
                             <p className="text-gray-600 mb-6">Anda memiliki sesi yang sedang berlangsung. Lanjutkan percakapan Anda atau mulai yang baru.</p>
-                            <div className="space-y-4 mb-6">
+                            
+                            {/* --- PERUBAHAN DIMULAI DI SINI --- */}
+                            {/* Penampung untuk list dengan tinggi maksimal dan scroll */}
+                            <div className="space-y-4 mb-6 max-h-110 overflow-y-auto pr-2">
                                 {sessions.map(session => (
                                     <button key={session.id} onClick={() => onSelect(session)} className="w-full text-left p-4 border rounded-lg hover:bg-gray-50 flex items-center justify-between">
                                         <div>
@@ -29,6 +32,8 @@ const SessionSelector = ({ sessions, onSelect, onCreate, isLoading, isRestoring 
                                     </button>
                                 ))}
                             </div>
+                            {/* --- PERUBAHAN SELESAI DI SINI --- */}
+
                             <div className="text-center text-gray-500 my-4">atau</div>
                         </>
                     ) : (
@@ -95,8 +100,8 @@ const ServicePublicChat = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col mx-auto w-full h-full">
-      <div className="flex-1 p-6 overflow-y-auto bg-white m-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+    <div className="flex-1 flex flex-col mx-auto w-full h-[700px] overflow-hidden">
+      <div className="flex-1 p-6 overflow-y-auto bg-white my-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.1)] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
         {messages.map((msg) => {
           const messageCitations = citations.filter(c => c.messageId === msg.id);
           const hasCitations = messageCitations.length > 0;
@@ -166,7 +171,7 @@ const ServicePublicChat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-5 bg-white border-t border-[#e9ecef]">
+      <div className="p-5 bg-white border-t border-[#e9ecef] rounded-t-xl">
         <form onSubmit={handleSendMessage} className="flex gap-3 items-end">
           <textarea
             ref={textareaRef}

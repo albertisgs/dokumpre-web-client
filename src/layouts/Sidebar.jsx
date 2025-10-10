@@ -10,93 +10,137 @@ import { menu } from "../configs/menu";
 import AgentSidebarSection from "./components/AgentSidebarSection";
 
 const ChatListItem = ({ chat, isActive, onClick, type }) => (
-    <div
-      onClick={onClick}
-      className={`px-5 py-4 border-b border-gray-100 cursor-pointer transition-all duration-200 relative ${
-        isActive ? "bg-blue-50 border-l-4 border-l-blue-500" : "hover:bg-gray-50"
-      }`}
-    >
-      <div className="flex justify-between items-center mb-1">
-        <div className="font-semibold text-sm text-gray-800 truncate">
-          {chat.user_name}
-        </div>
-        <div className="text-xs text-gray-500">
-          {new Date(chat.created_at || chat.claimed_at || chat.ended_at).toLocaleTimeString(
-            "id-ID",
-            { hour: "2-digit", minute: "2-digit" }
-          )}
-        </div>
+  <div
+    onClick={onClick}
+    className={`px-5 py-4 border-b border-gray-100 cursor-pointer transition-all duration-200 relative ${
+      isActive ? "bg-blue-50 border-l-4 border-l-blue-500" : "hover:bg-gray-50"
+    }`}
+  >
+    <div className="flex justify-between items-center mb-1">
+      <div className="font-semibold text-sm text-gray-800 truncate">
+        {chat.user_name}
       </div>
-      <div className="text-xs text-gray-600 line-clamp-2">
-        {type === 'active' ? "Percakapan sedang berlangsung..." :
-         type === 'queue' ? "Menunggu di antrian..." :
-         "Percakapan telah selesai."}
+      <div className="text-xs text-gray-500">
+        {new Date(
+          chat.created_at || chat.claimed_at || chat.ended_at
+        ).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
       </div>
     </div>
+    <div className="text-xs text-gray-600 line-clamp-2">
+      {type === "active"
+        ? "Percakapan sedang berlangsung..."
+        : type === "queue"
+        ? "Menunggu di antrian..."
+        : "Percakapan telah selesai."}
+    </div>
+  </div>
 );
-
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { authState, isSuperAdmin } = useAuth();
-  
-  const { 
-    queue, activeChat, history, initialize, claimChat, pending, 
-    managePresence, agentStatus, fetchHistoryTranscript 
-  } = useAgentStore();
-  
-  const { queueCount, activeCount, historyCount, pendingCount, agentName } = useAgentData();
 
-  const [activeList, setActiveList] = useState('queue');
+  const {
+    queue,
+    activeChat,
+    activeChats,
+    selectedChatId,
+    selectActiveChat,
+    history,
+    initialize,
+    claimChat,
+    pending,
+    managePresence,
+    agentStatus,
+    fetchHistoryTranscript,
+    selectedHistoryTranscript,
+    clearSelectedTranscript,
+    isTranscriptLoading,
+  } = useAgentStore();
+
+  const { queueCount, activeCount, historyCount, pendingCount, agentName } =
+    useAgentData();
+
+  const [activeList, setActiveList] = useState("queue");
+
+  // 2. BUAT FUNGSI HANDLER BARU
+  const handleListChange = (listName) => {
+    // Setiap kali berganti tab, pastikan transkrip yang lama dibersihkan
+    if (selectedHistoryTranscript) {
+      clearSelectedTranscript();
+    }
+    setActiveList(listName);
+  };
 
   // --- PERUBAHAN LOGIKA DI SINI ---
   const showAgentSection = useMemo(() => {
-    const hasTeamAccess = authState.user?.access_list?.includes("agent-dashboard");
-    const hasRolePermission = authState.user?.permissions?.includes("agent-dashboard:access");
+    const hasTeamAccess =
+      authState.user?.access_list?.includes("agent-dashboard");
+    const hasRolePermission = authState.user?.permissions?.includes(
+      "agent-dashboard:access"
+    );
     return hasTeamAccess && hasRolePermission;
   }, [authState.user]);
 
   useEffect(() => {
     if (showAgentSection) {
-        initialize();
-        const cleanupPresence = managePresence(); 
-        return () => {
-            if (cleanupPresence) cleanupPresence();
-        };
+      initialize();
+      const cleanupPresence = managePresence();
+      return () => {
+        if (cleanupPresence) cleanupPresence();
+      };
     }
   }, [showAgentSection, initialize, managePresence]);
 
   const handlePendingSelect = async (sessionId) => {
     const session = await claimChat(sessionId);
     if (session) {
-        navigate(`/agent-dashboard/${session.id}`);
+      navigate(`/agent-dashboard/${session.id}`);
     }
   };
 
   const handleQueueSelect = async (sessionId) => {
     const session = await claimChat(sessionId);
     if (session) {
-        navigate(`/agent-dashboard/${session.id}`);
+      navigate(`/agent-dashboard/${session.id}`);
     }
   };
 
   const handleHistorySelect = (sessionId) => {
     fetchHistoryTranscript(sessionId);
-    navigate('/agent-dashboard');
+    // Tidak perlu navigasi jika sudah di halaman yang benar
+    if (location.pathname !== "/agent-dashboard") {
+      navigate("/agent-dashboard");
+    }
+    // Set activeList secara manual untuk responsivitas instan
+    setActiveList("history");
   };
 
   useEffect(() => {
-    if (location.pathname.includes('/history')) {
-        setActiveList('history');
-    } else if (activeChat) {
-        setActiveList('active');
-    } else if (activeChat) {
-        setActiveList('queue');
-    } else {
-      setActiveList('pending');
+    // Prioritas 1: Jika transkrip sedang DILIHAT atau sedang DILOADING,
+    // maka tab WAJIB 'history'.
+    if (selectedHistoryTranscript || isTranscriptLoading) {
+      setActiveList("history");
     }
-  }, [location.pathname, activeChat]);
+    // Prioritas 2: Jika tidak ada urusan dengan riwayat, cek sesi aktif.
+    else if (activeChat) {
+      setActiveList("active");
+    }
+    // Prioritas 3: Default jika tidak ada keduanya.
+    else if (queue.length > 0) {
+      setActiveList("queue");
+    } else {
+      setActiveList("pending");
+    }
+    // Tambahkan isTranscriptLoading ke dependency array
+  }, [
+    location.pathname,
+    activeChat,
+    selectedHistoryTranscript,
+    queue.length,
+    isTranscriptLoading,
+  ]);
 
   // --- PERUBAHAN LOGIKA DI SINI ---
   const accessibleMenu = useMemo(() => {
@@ -107,7 +151,7 @@ const Sidebar = () => {
 
     return menu.filter((item) => {
       if (userIsSuperAdmin) return true;
-      
+
       // Logika spesifik per identifier
       switch (item.identifier) {
         case "user-management":
@@ -118,7 +162,10 @@ const Sidebar = () => {
           return false; // Hanya untuk superadmin
         case "agent-dashboard":
           // Memerlukan akses tim DAN permission role
-          return userAccessList.includes("agent-dashboard") && userPermissions.includes("agent-dashboard:access");
+          return (
+            userAccessList.includes("agent-dashboard") &&
+            userPermissions.includes("agent-dashboard:access")
+          );
         default:
           // Fallback untuk item menu lainnya
           return userAccessList.includes(item.identifier);
@@ -126,7 +173,8 @@ const Sidebar = () => {
     });
   }, [authState.user, isSuperAdmin]);
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + "/");
+  const isActive = (path) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
     <nav className="fixed top-0 left-0 h-screen w-20 md:w-72 bg-[#ebf2ff] text-[#374151] flex flex-col shadow-md transition-all duration-300 z-50">
@@ -146,7 +194,11 @@ const Sidebar = () => {
             }`}
           >
             {typeof item.icon === "string" ? (
-              <img src={item.icon} alt={`${item.title} Icon`} className="w-5 h-5 md:mr-3" />
+              <img
+                src={item.icon}
+                alt={`${item.title} Icon`}
+                className="w-5 h-5 md:mr-3"
+              />
             ) : (
               <item.icon className="w-5 h-5 md:mr-3" />
             )}
@@ -157,62 +209,99 @@ const Sidebar = () => {
 
       {showAgentSection && (
         <div className="flex flex-col min-h-0">
-          <AgentSidebarSection 
+          <AgentSidebarSection
             activeList={activeList}
-            setActiveList={setActiveList}
-            counts={{ active: activeCount, queue: queueCount, history: historyCount, pending: pendingCount }}
+            setActiveList={handleListChange}
+            counts={{
+              active: activeCount,
+              queue: queueCount,
+              history: historyCount,
+              pending: pendingCount,
+            }}
             agentName={agentName}
             agentStatus={agentStatus}
           />
-          
+
           <div className="overflow-y-auto hidden md:block h-[170px]">
-            {activeList === 'active' && (
+            {activeList === "active" && (
               <>
                 <div className="px-5 py-2 bg-gray-100 border-b border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
                   <MessageSquare className="w-4 h-4 mr-2" /> Sesi Aktif
                 </div>
-                {activeChat ? (
-                    <ChatListItem chat={activeChat} isActive={true} onClick={() => navigate(`/agent-dashboard/${activeChat.id}`)} type="active" />
+                {activeChats.length > 0 ? (
+                  // Lakukan iterasi (map) pada array activeChats
+                  activeChats.map((chat) => (
+                    <ChatListItem
+                      key={chat.id}
+                      chat={chat}
+                      // Buat aktif jika ID chat sama dengan selectedChatId
+                      isActive={chat.id === selectedChatId}
+                      // Panggil selectActiveChat saat diklik
+                      onClick={() => selectActiveChat(chat.id)}
+                      type="active"
+                    />
+                  ))
                 ) : (
-                    <p className="p-4 text-center text-xs text-gray-400">Tidak ada sesi aktif.</p>
+                  <p className="p-4 text-center text-xs text-gray-400">
+                    Tidak ada sesi aktif.
+                  </p>
                 )}
               </>
             )}
 
-            {activeList === 'queue' && (
+            {activeList === "queue" && (
               <>
                 <div className="px-5 py-2 bg-gray-100 border-y border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
-                  <Clock className="w-4 h-4 mr-2" /> Antrian Chat ({queue.length})
+                  <Clock className="w-4 h-4 mr-2" /> Antrian Chat (
+                  {queue.length})
                 </div>
                 {queue.length > 0 ? (
                   queue.map((chat) => (
-                    <ChatListItem key={chat.session_id} chat={chat} isActive={false} onClick={() => handleQueueSelect(chat.session_id)} type="queue" />
+                    <ChatListItem
+                      key={chat.session_id}
+                      chat={chat}
+                      isActive={false}
+                      onClick={() => handleQueueSelect(chat.session_id)}
+                      type="queue"
+                    />
                   ))
                 ) : (
-                  <p className="p-4 text-center text-xs text-gray-400">Tidak ada antrian.</p>
-                )}
-              </>
-            )}
-            
-            {activeList === 'history' && (
-              <>
-                <div className="px-5 py-2 bg-gray-100 border-y border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
-                  <History className="w-4 h-4 mr-2" /> Riwayat Chat ({history.length})
-                </div>
-                {history.length > 0 ? (
-                    history.map((item) => (
-                        <ChatListItem key={item.id} chat={item} isActive={false} onClick={() => handleHistorySelect(item.id)} type="history" />
-                    ))
-                ) : (
-                    <p className="p-4 text-center text-xs text-gray-400">Tidak ada riwayat.</p>
+                  <p className="p-4 text-center text-xs text-gray-400">
+                    Tidak ada antrian.
+                  </p>
                 )}
               </>
             )}
 
-            {activeList === 'pending' && (
+            {activeList === "history" && (
               <>
                 <div className="px-5 py-2 bg-gray-100 border-y border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
-                  <Clock className="w-4 h-4 mr-2" /> Pending Chat ({pending.length})
+                  <History className="w-4 h-4 mr-2" /> Riwayat Chat (
+                  {history.length})
+                </div>
+                {history.length > 0 ? (
+                  history.map((item) => (
+                    <ChatListItem
+                      key={item.id}
+                      chat={item}
+                      isActive={false}
+                      onClick={() => handleHistorySelect(item.id)}
+                      type="history"
+                    />
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-xs text-gray-400">
+                    Tidak ada riwayat.
+                  </p>
+                )}
+              </>
+            )}
+
+            {activeList === "pending" && (
+              <>
+                <div className="px-5 py-2 bg-gray-100 border-y border-gray-200 text-xs font-semibold text-gray-700 flex items-center">
+                  <Clock className="w-4 h-4 mr-2" /> Pending Chat (
+                  {pending.length})
                 </div>
                 {pending.length > 0 ? (
                   pending.map((chat) => (
@@ -225,11 +314,12 @@ const Sidebar = () => {
                     />
                   ))
                 ) : (
-                  <p className="p-4 text-center text-xs text-gray-400">Tidak ada pending.</p>
+                  <p className="p-4 text-center text-xs text-gray-400">
+                    Tidak ada pending.
+                  </p>
                 )}
               </>
             )}
-
           </div>
         </div>
       )}

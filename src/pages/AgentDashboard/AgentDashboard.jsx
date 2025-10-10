@@ -95,7 +95,8 @@ const TranscriptViewer = () => {
 
 const LiveChatWindow = () => {
   const { authState } = useAuth();
-  const { activeChat, endSession, sendMessage } = useAgentStore();
+  const { activeChats, selectedChatId, endSession, sendMessage } = useAgentStore();
+  const activeChat = activeChats.find(chat => chat.id === selectedChatId);
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -140,21 +141,22 @@ const LiveChatWindow = () => {
   };
 
   if (!activeChat) {
-    return (
-      <div className="flex flex-col justify-center items-center h-full text-gray-500 p-8 text-center">
-        <PhoneOff className="w-16 h-16 text-gray-300 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-700">
-          Tidak Ada Sesi Aktif
-        </h3>
-        <p className="text-gray-600 mt-2">
-          Pilih percakapan dari antrian untuk memulai.
-        </p>
-      </div>
-    );
-  }
+        return (
+            <div className="flex flex-col justify-center items-center h-full text-gray-500 p-8 text-center">
+                <PhoneOff className="w-16 h-16 text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700">
+                  Tidak Ada Sesi Aktif Terpilih
+                </h3>
+                <p className="text-gray-600 mt-2">
+                  Pilih percakapan dari daftar sesi aktif di sidebar.
+                </p>
+            </div>
+        );
+    }
+
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 m-4 rounded-lg shadow-sm">
+    <div className="flex flex-col h-[700px] bg-gray-50 m-4 rounded-lg shadow-sm">
       <div className="p-4 flex justify-between items-center bg-white rounded-t-lg">
         <h3 className="font-bold">{activeChat.user_name}</h3>
         <button
@@ -228,10 +230,8 @@ const LiveChatWindow = () => {
 };
 
 const AgentDashboard = () => {
-  const { sessionId } = useParams();
-  const { activeChat, selectedHistoryTranscript, isInitialized } =
-    useAgentStore();
-
+  // const { sessionId } = useParams();
+  const { selectedChatId, selectedHistoryTranscript, isInitialized } = useAgentStore();
   if (!isInitialized) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -240,14 +240,15 @@ const AgentDashboard = () => {
     );
   }
 
-  if (sessionId && activeChat && activeChat.id === sessionId) {
-    console.log("line 244", sessionId, activeChat.id)
-    return <LiveChatWindow />;
-  }
+  // Jika ada riwayat yang dipilih, tampilkan viewer riwayat
+    if (selectedHistoryTranscript) {
+        return <TranscriptViewer />;
+    }
 
-  if (selectedHistoryTranscript) {
-    return <TranscriptViewer />;
-  }
+    // Jika ada chat aktif yang dipilih, tampilkan jendela chat
+    if (selectedChatId) {
+        return <LiveChatWindow />;
+    }
 
   return (
     <div className="flex flex-col justify-center items-center h-full text-gray-500 p-8 text-center">
